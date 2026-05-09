@@ -1,22 +1,24 @@
 import { useState, useEffect } from "react";
+import { IconChartLine, IconPencil, IconListCheck, IconBrain, IconBulb, IconPlus, IconArrowLeft, IconPin, IconHome } from "@tabler/icons-react";
 
 const COLORS = {
-  bg: "#f5f3ef",
-  surface: "#ffffff",
-  surfaceWarm: "#fdf9f5",
-  border: "#e8e0d8",
-  accent: "#7a9e87",
-  accentSoft: "#d6e8dc",
-  accentText: "#4a7a5a",
-  text: "#3a3530",
-  textMuted: "#9a9088",
-  success: "#7a9e87",
-  successBg: "#e8f2eb",
-  successText: "#3a6b4a",
-  hint: "#fdf6ee",
-  hintBorder: "#f0e4d0",
-  hintText: "#8a7060",
-  danger: "#c97b6a",
+  bg: "#0f1117",
+  surface: "#1a1d27",
+  surfaceWarm: "#1e2132",
+  border: "#2a2d3e",
+  accent: "#38bdf8",
+  accentSoft: "#0c2a3a",
+  accentText: "#38bdf8",
+  text: "#e8eaf0",
+  textMuted: "#6b7280",
+  success: "#38bdf8",
+  successBg: "#0c2a3a",
+  successText: "#38bdf8",
+  hint: "#151929",
+  hintBorder: "#2a2d3e",
+  hintText: "#8b98b0",
+  danger: "#f87171",
+  psAccent: "#818cf8",
 };
 
 const CBT_STEPS = [
@@ -127,10 +129,10 @@ const daysInMonth = (y, m) => new Date(parseInt(y), parseInt(m), 0).getDate();
 
 const sel = {
   flex: 1,
-  background: "#ffffff",
-  border: "1.5px solid #e8e0d8",
+  background: "#1a1d27",
+  border: "1px solid #2a2d3e",
   borderRadius: 10,
-  color: "#3a3530",
+  color: "#e8eaf0",
   fontSize: 15,
   padding: "12px 8px",
   outline: "none",
@@ -142,10 +144,10 @@ const sel = {
 
 const inp = {
   width: "100%",
-  background: "#ffffff",
-  border: "1.5px solid #e8e0d8",
+  background: "#151929",
+  border: "1px solid #2a2d3e",
   borderRadius: 10,
-  color: "#3a3530",
+  color: "#e8eaf0",
   fontSize: 15,
   padding: "12px 14px",
   outline: "none",
@@ -154,6 +156,17 @@ const inp = {
   lineHeight: 1.7,
   boxSizing: "border-box",
 };
+
+const BottomNav = ({ onBack, onHome }) => (
+  <div style={{ display: "flex", gap: 10, marginTop: 32, paddingTop: 16, borderTop: `1px solid #2a2d3e` }}>
+    <button onClick={onBack} style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, background: "#1a1d27", border: "1px solid #2a2d3e", borderRadius: 12, color: "#6b7280", fontSize: 14, padding: "12px", cursor: "pointer" }}>
+      <IconArrowLeft size={16} />戻る
+    </button>
+    <button onClick={onHome} style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, background: "#1a1d27", border: "1px solid #2a2d3e", borderRadius: 12, color: "#6b7280", fontSize: 14, padding: "12px", cursor: "pointer" }}>
+      <IconHome size={16} />ホーム
+    </button>
+  </div>
+);
 
 const DateSelector = ({ year, month, day, onYear, onMonth, onDay }) => {
   const yearOptions = ["2025", "2026", "2027"];
@@ -348,6 +361,11 @@ export default function App() {
     setView("list");
   };
 
+  const saveCBTDraft = () => {
+    setRecords(records.map((r) => r.id === cbtId ? { ...r, completed: false, cbt: cbtDraft } : r));
+    setView("list");
+  };
+
   const startPS = (id) => {
     const rec = records.find((r) => r.id === id);
     setPsId(id);
@@ -359,6 +377,11 @@ export default function App() {
 
   const finishPS = () => {
     setRecords(records.map((r) => r.id === psId ? { ...r, completed: true, ps: psDraft } : r));
+    setView("list");
+  };
+
+  const savePSDraft = () => {
+    setRecords(records.map((r) => r.id === psId ? { ...r, completed: false, ps: psDraft } : r));
     setView("list");
   };
 
@@ -374,32 +397,33 @@ export default function App() {
       <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&display=swap" rel="stylesheet" />
 
       {/* Header */}
-      <div style={{ padding: "28px 20px 16px", borderBottom: `1px solid ${COLORS.border}`, display: "flex", alignItems: "center", justifyContent: "space-between", background: COLORS.surface }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+      <div style={{ padding: "20px 20px 16px", borderBottom: `1px solid ${COLORS.border}`, display: "flex", alignItems: "center", justifyContent: "space-between", background: COLORS.surface }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           {view !== "home" && (
             <button onClick={() => {
               if (view === "newCoping") { setView("coping"); }
               else if (view === "list" || view === "coping" || view === "checkin" || view === "checkinHistory") { setView("home"); }
               else if (view === "new" || view === "detail") { setView("list"); setEditing(false); }
               else { setView("list"); setEditing(false); }
-            }} style={{ background: "none", border: "none", color: COLORS.textMuted, cursor: "pointer", fontSize: 22, padding: 0, lineHeight: 1 }}>←</button>
+            }} style={{ background: "none", border: "none", color: COLORS.textMuted, cursor: "pointer", fontSize: 20, padding: 0, lineHeight: 1 }}><IconArrowLeft size={20} /></button>
           )}
           <div>
-            <div style={{ fontSize: 11, letterSpacing: 2, color: COLORS.accent, textTransform: "uppercase", fontWeight: 700 }}>Reframe</div>
-            <div style={{ fontSize: 20, fontWeight: 700, marginTop: 1, color: COLORS.text }}>
-              {view === "home" && "Reframe"}
-              {view === "list" && "ストレス記録"}
-              {view === "new" && "出来事を記録"}
-              {view === "checkin" && "今日のチェックイン"}
-              {view === "checkinHistory" && "チェックイン履歴"}
-              {view === "coping" && "コーピングリスト"}
-              {view === "newCoping" && "コーピングを追加"}
-              {view === "approach" && "アプローチを選ぶ"}
-              {view === "cbt" && "認知再構成"}
-              {view === "ps" && "問題解決技法"}
-              {view === "detail" && !editing && "記録の詳細"}
-              {view === "detail" && editing && "編集"}
-            </div>
+            <div style={{ fontSize: 13, letterSpacing: 3, color: COLORS.accent, textTransform: "uppercase", fontWeight: 700 }}>Stride</div>
+            {view !== "home" && (
+              <div style={{ fontSize: 18, fontWeight: 700, marginTop: 2, color: COLORS.text }}>
+                {view === "list" && "ストレス記録"}
+                {view === "new" && "出来事を記録"}
+                {view === "checkin" && "今日のチェックイン"}
+                {view === "checkinHistory" && "チェックイン履歴"}
+                {view === "coping" && "コーピングリスト"}
+                {view === "newCoping" && "コーピングを追加"}
+                {view === "approach" && "アプローチを選ぶ"}
+                {view === "cbt" && "認知再構成"}
+                {view === "ps" && "問題解決技法"}
+                {view === "detail" && !editing && "記録の詳細"}
+                {view === "detail" && editing && "編集"}
+              </div>
+            )}
           </div>
         </div>
         {view === "detail" && !editing && selectedDetail && (
@@ -411,47 +435,81 @@ export default function App() {
 
       {/* HOME */}
       {view === "home" && (
-        <div style={{ padding: "24px 16px" }}>
+        <div style={{ padding: "32px 16px 24px" }}>
+          {/* ヒーローテキスト */}
+          <div style={{ marginBottom: 32 }}>
+            <div style={{ fontSize: 28, fontWeight: 700, color: COLORS.text, lineHeight: 1.3, marginBottom: 8 }}>
+              今日も、<span style={{ color: COLORS.accent }}>一歩ずつ。</span>
+            </div>
+            <div style={{ fontSize: 13, color: COLORS.textMuted, lineHeight: 1.7 }}>
+              記録することで、自分のパターンが見えてくる
+            </div>
+          </div>
+
           {/* チェックインカード */}
           {todayCheckin ? (
-            <div style={{ background: COLORS.successBg, borderRadius: 12, padding: "14px 16px", marginBottom: 20, border: `1px solid ${COLORS.accentSoft}` }}>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
-                <div style={{ fontSize: 11, color: COLORS.accentText, fontWeight: 700 }}>今日のチェックイン済み</div>
+            <div style={{ background: COLORS.surface, borderRadius: 16, padding: "16px 18px", marginBottom: 24, border: `1px solid ${COLORS.accent}30` }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+                <div style={{ fontSize: 11, color: COLORS.accent, fontWeight: 700, letterSpacing: 1.5, textTransform: "uppercase" }}>Today's Check-in</div>
                 <button onClick={() => { setCheckinDraft({ mood: todayCheckin.mood, condition: todayCheckin.condition, sleep: todayCheckin.sleep, memo: todayCheckin.memo || "" }); setView("checkin"); }}
-                  style={{ background: "none", border: "none", color: COLORS.accentText, fontSize: 12, cursor: "pointer", padding: 0, opacity: 0.7 }}>編集</button>
+                  style={{ background: "none", border: "none", color: COLORS.textMuted, fontSize: 12, cursor: "pointer", padding: 0 }}>編集</button>
               </div>
-              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                <div style={{ fontSize: 28, fontWeight: 700, color: COLORS.accentText }}>{todayCheckin.mood}</div>
-                <div style={{ fontSize: 13, color: COLORS.accentText }}>
-                  {todayCheckin.condition && <div>{todayCheckin.condition}</div>}
-                  {todayCheckin.sleep && <div>睡眠 {todayCheckin.sleep}</div>}
-                  {todayCheckin.memo && <div style={{ marginTop: 2, color: COLORS.accent }}>{todayCheckin.memo}</div>}
+              <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+                <div style={{ fontSize: 40, fontWeight: 700, color: COLORS.accent, lineHeight: 1 }}>{todayCheckin.mood}</div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ height: 4, background: COLORS.border, borderRadius: 2, marginBottom: 8, overflow: "hidden" }}>
+                    <div style={{ width: `${todayCheckin.mood * 10}%`, height: "100%", background: COLORS.accent, borderRadius: 2 }} />
+                  </div>
+                  <div style={{ fontSize: 12, color: COLORS.textMuted, display: "flex", gap: 10 }}>
+                    {todayCheckin.condition && <span>{todayCheckin.condition}</span>}
+                    {todayCheckin.sleep && <span>睡眠 {todayCheckin.sleep}</span>}
+                  </div>
+                  {todayCheckin.memo && <div style={{ fontSize: 12, color: COLORS.accent, marginTop: 4 }}>"{todayCheckin.memo}"</div>}
                 </div>
               </div>
             </div>
           ) : (
             <button onClick={() => { setCheckinDraft({ mood: 5, condition: null, sleep: null, memo: "" }); setView("checkin"); }}
-              style={{ width: "100%", background: COLORS.successBg, border: `1px solid ${COLORS.accentSoft}`, borderRadius: 12, color: COLORS.accentText, fontSize: 14, fontWeight: 700, padding: 14, cursor: "pointer", marginBottom: 20 }}>
-              今日のチェックインをする
+              style={{ width: "100%", background: COLORS.surface, border: `1px solid ${COLORS.accent}50`, borderRadius: 16, color: COLORS.accent, fontSize: 14, fontWeight: 700, padding: 16, cursor: "pointer", marginBottom: 24, textAlign: "left", letterSpacing: 0.5 }}>
+              <div style={{ fontSize: 11, letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 4, opacity: 0.7 }}>Today's Check-in</div>
+              今日のチェックインをする →
             </button>
           )}
 
           {/* メニュー */}
-          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             <button onClick={() => setView("checkinHistory")}
-              style={{ width: "100%", background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 12, color: COLORS.text, fontSize: 15, fontWeight: 700, padding: 18, cursor: "pointer", textAlign: "left" }}>
-              <div>チェックイン履歴</div>
-              <div style={{ fontSize: 12, fontWeight: 400, color: COLORS.textMuted, marginTop: 4 }}>過去2週間の気分・体調を振り返る</div>
+              style={{ width: "100%", background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 14, color: COLORS.text, fontSize: 14, fontWeight: 700, padding: "16px 18px", cursor: "pointer", textAlign: "left" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <IconChartLine size={24} color={COLORS.accent} />
+                <div>
+                  <div style={{ fontSize: 11, color: COLORS.accent, letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 3 }}>History</div>
+                  チェックイン履歴
+                  <div style={{ fontSize: 12, fontWeight: 400, color: COLORS.textMuted, marginTop: 3 }}>過去2週間の気分・体調を振り返る</div>
+                </div>
+              </div>
             </button>
             <button onClick={() => setView("list")}
-              style={{ width: "100%", background: COLORS.accent, border: "none", borderRadius: 12, color: "#fff", fontSize: 15, fontWeight: 700, padding: 18, cursor: "pointer", textAlign: "left" }}>
-              <div>ストレス記録</div>
-              <div style={{ fontSize: 12, fontWeight: 400, marginTop: 4, opacity: 0.85 }}>記録の一覧・アプローチワーク</div>
+              style={{ width: "100%", background: `linear-gradient(135deg, ${COLORS.accent}20, ${COLORS.accent}08)`, border: `1px solid ${COLORS.accent}40`, borderRadius: 14, color: COLORS.text, fontSize: 14, fontWeight: 700, padding: "16px 18px", cursor: "pointer", textAlign: "left" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <IconPencil size={24} color={COLORS.accent} />
+                <div>
+                  <div style={{ fontSize: 11, color: COLORS.accent, letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 3 }}>Stress Log</div>
+                  ストレス記録
+                  <div style={{ fontSize: 12, fontWeight: 400, color: COLORS.textMuted, marginTop: 3 }}>記録の一覧・アプローチワーク</div>
+                </div>
+              </div>
             </button>
             <button onClick={() => setView("coping")}
-              style={{ width: "100%", background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 12, color: COLORS.text, fontSize: 15, fontWeight: 700, padding: 18, cursor: "pointer", textAlign: "left" }}>
-              <div>コーピングリスト</div>
-              <div style={{ fontSize: 12, fontWeight: 400, color: COLORS.textMuted, marginTop: 4 }}>自分だけの対処法を管理する</div>
+              style={{ width: "100%", background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 14, color: COLORS.text, fontSize: 14, fontWeight: 700, padding: "16px 18px", cursor: "pointer", textAlign: "left" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <IconListCheck size={24} color="#818cf8" />
+                <div>
+                  <div style={{ fontSize: 11, color: "#818cf8", letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 3 }}>Coping</div>
+                  コーピングリスト
+                  <div style={{ fontSize: 12, fontWeight: 400, color: COLORS.textMuted, marginTop: 3 }}>自分だけの対処法を管理する</div>
+                </div>
+              </div>
             </button>
           </div>
         </div>
@@ -460,8 +518,8 @@ export default function App() {
       {/* LIST */}
       {view === "list" && (
         <div style={{ padding: "20px 16px" }}>
-          <button onClick={() => setView("new")} style={{ width: "100%", background: COLORS.accent, border: "none", borderRadius: 12, color: "#fff", fontSize: 15, fontWeight: 700, padding: 14, cursor: "pointer", marginBottom: 24 }}>
-            ＋ ストレスを記録する
+          <button onClick={() => setView("new")} style={{ width: "100%", background: COLORS.accent, border: "none", borderRadius: 12, color: "#0f1117", fontSize: 15, fontWeight: 700, padding: 14, cursor: "pointer", marginBottom: 24, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+            <IconPlus size={18} />ストレスを記録する
           </button>
           {records.length === 0 && (
             <div style={{ textAlign: "center", color: COLORS.textMuted, marginTop: 60, fontSize: 14, lineHeight: 2 }}>まだ記録がないよ<br />上のボタンから追加してみて</div>
@@ -493,12 +551,15 @@ export default function App() {
                 </div>
                 {!rec.completed && (
                   <button onClick={() => startApproach(rec.id)} style={{ marginTop: 12, width: "100%", background: COLORS.accentSoft, border: "none", borderRadius: 8, color: COLORS.accentText, fontSize: 13, fontWeight: 700, padding: "10px", cursor: "pointer" }}>
-                    アプローチを選ぶ →
+                    {(rec.cbt && Object.keys(rec.cbt).length > 0) || (rec.ps && Object.keys(rec.ps).length > 0)
+                      ? "続きから →"
+                      : "アプローチを選ぶ →"}
                   </button>
                 )}
               </div>
             ))}
           </div>
+          <BottomNav onBack={() => setView("home")} onHome={() => setView("home")} />
         </div>
       )}
 
@@ -563,6 +624,7 @@ export default function App() {
               </div>
             </div>
           )}
+          <BottomNav onBack={() => setView("home")} onHome={() => setView("home")} />
         </div>
       )}
 
@@ -655,10 +717,9 @@ export default function App() {
               );
             })}
           </div>
+          <BottomNav onBack={() => setView("home")} onHome={() => setView("home")} />
         </div>
       )}
-
-      {/* CHECKIN */}
       {view === "checkin" && (
         <div style={{ padding: "24px 16px" }}>
           {/* 気分スコア */}
@@ -713,7 +774,7 @@ export default function App() {
           </div>
 
           <div style={{ display: "flex", gap: 10 }}>
-            <button onClick={() => setView("list")} style={{ flex: 1, background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 10, color: COLORS.textMuted, fontSize: 14, padding: 13, cursor: "pointer" }}>キャンセル</button>
+            <button onClick={() => setView("home")} style={{ flex: 1, background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 10, color: COLORS.textMuted, fontSize: 14, padding: 13, cursor: "pointer" }}>キャンセル</button>
             <button onClick={saveCheckin} disabled={!checkinDraft.mood}
               style={{ flex: 2, background: checkinDraft.mood ? COLORS.accent : COLORS.border, border: "none", borderRadius: 10, color: "#fff", fontSize: 14, fontWeight: 700, padding: 13, cursor: checkinDraft.mood ? "pointer" : "default", transition: "background 0.2s" }}>
               記録する
@@ -762,7 +823,7 @@ export default function App() {
           {/* PS記録 */}
           {selectedDetail.ps && Object.keys(selectedDetail.ps).length > 0 && (
             <div style={{ marginBottom: 24 }}>
-              <div style={{ fontSize: 12, color: "#7a8e9e", fontWeight: 700, letterSpacing: 1, marginBottom: 12, paddingBottom: 8, borderBottom: `1px solid ${COLORS.border}` }}>問題解決技法の記録</div>
+              <div style={{ fontSize: 12, color: "#818cf8", fontWeight: 700, letterSpacing: 1, marginBottom: 12, paddingBottom: 8, borderBottom: `1px solid ${COLORS.border}` }}>問題解決技法の記録</div>
               {PS_STEPS.map((step) => selectedDetail.ps[step.id] ? (
                 <div key={step.id} style={{ marginBottom: 14 }}>
                   <div style={{ fontSize: 11, color: COLORS.textMuted, fontWeight: 700, letterSpacing: 1, marginBottom: 5, textTransform: "uppercase" }}>{step.label}</div>
@@ -780,6 +841,7 @@ export default function App() {
           <button onClick={() => startApproach(selectedDetail.id)} style={{ width: "100%", background: COLORS.accent, border: "none", borderRadius: 12, color: "#fff", fontSize: 15, fontWeight: 700, padding: 14, cursor: "pointer", marginTop: 8 }}>
             アプローチを選ぶ →
           </button>
+          <BottomNav onBack={() => setView("list")} onHome={() => setView("home")} />
         </div>
       )}
 
@@ -810,7 +872,7 @@ export default function App() {
               <div style={{ fontSize: 13, color: COLORS.textMuted, marginBottom: 16, paddingTop: 8, borderTop: `1px solid ${COLORS.border}` }}>問題解決技法の内容</div>
               {PS_STEPS.map((step) => (
                 <div key={step.id} style={{ marginBottom: 16 }}>
-                  <div style={{ fontSize: 11, color: "#7a8e9e", fontWeight: 700, letterSpacing: 1, marginBottom: 6, textTransform: "uppercase" }}>{step.label}</div>
+                  <div style={{ fontSize: 11, color: "#818cf8", fontWeight: 700, letterSpacing: 1, marginBottom: 6, textTransform: "uppercase" }}>{step.label}</div>
                   <textarea rows={3} style={inp} placeholder={step.placeholder} value={editPs[step.id] || ""} onChange={(e) => setEditPs({ ...editPs, [step.id]: e.target.value })} />
                 </div>
               ))}
@@ -826,22 +888,29 @@ export default function App() {
       {/* APPROACH */}
       {view === "approach" && selectedDetail && (
         <div style={{ padding: "20px 16px" }}>
-          <div style={{ background: COLORS.accentSoft, borderRadius: 10, padding: "10px 14px", fontSize: 12, color: COLORS.accentText, marginBottom: 24, border: `1px solid ${COLORS.border}` }}>
-            📌 {selectedDetail.situation}
+          <div style={{ background: COLORS.accentSoft, borderRadius: 10, padding: "10px 14px", fontSize: 12, color: COLORS.accentText, marginBottom: 24, border: `1px solid ${COLORS.border}`, display: "flex", alignItems: "center", gap: 8 }}>
+            <IconPin size={14} />{selectedDetail.situation}
           </div>
           <div style={{ fontSize: 13, color: COLORS.textMuted, marginBottom: 16 }}>どのアプローチで向き合いますか？</div>
 
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-            <button onClick={() => startCBT(selectedDetail.id)} style={{ background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 12, padding: "16px", cursor: "pointer", textAlign: "left" }}>
-              <div style={{ fontSize: 15, fontWeight: 700, color: COLORS.text, marginBottom: 4 }}>認知再構成</div>
-              <div style={{ fontSize: 13, color: COLORS.textMuted, lineHeight: 1.6 }}>考え方のクセが気になるとき。自動思考を整理して、バランスのとれた見方を探す</div>
+            <button onClick={() => startCBT(selectedDetail.id)} style={{ background: COLORS.surface, border: `1px solid ${COLORS.accent}40`, borderRadius: 14, padding: "16px", cursor: "pointer", textAlign: "left" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 6 }}>
+                <IconBrain size={22} color={COLORS.accent} />
+                <div style={{ fontSize: 15, fontWeight: 700, color: COLORS.text }}>認知再構成</div>
+              </div>
+              <div style={{ fontSize: 13, color: COLORS.textMuted, lineHeight: 1.6, paddingLeft: 34 }}>考え方のクセが気になるとき。自動思考を整理して、バランスのとれた見方を探す</div>
             </button>
 
-            <button onClick={() => startPS(selectedDetail.id)} style={{ background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 12, padding: "16px", cursor: "pointer", textAlign: "left" }}>
-              <div style={{ fontSize: 15, fontWeight: 700, color: COLORS.text, marginBottom: 4 }}>問題解決技法</div>
-              <div style={{ fontSize: 13, color: COLORS.textMuted, lineHeight: 1.6 }}>状況そのものを変えたいとき。問題を整理して、具体的な行動を考える</div>
+            <button onClick={() => startPS(selectedDetail.id)} style={{ background: COLORS.surface, border: `1px solid #818cf840`, borderRadius: 14, padding: "16px", cursor: "pointer", textAlign: "left" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 6 }}>
+                <IconBulb size={22} color="#818cf8" />
+                <div style={{ fontSize: 15, fontWeight: 700, color: COLORS.text }}>問題解決技法</div>
+              </div>
+              <div style={{ fontSize: 13, color: COLORS.textMuted, lineHeight: 1.6, paddingLeft: 34 }}>状況そのものを変えたいとき。問題を整理して、具体的な行動を考える</div>
             </button>
           </div>
+          <BottomNav onBack={() => setView("detail")} onHome={() => setView("home")} />
         </div>
       )}
 
@@ -850,10 +919,10 @@ export default function App() {
         <div style={{ padding: "20px 16px" }}>
           <div style={{ display: "flex", gap: 4, marginBottom: 28 }}>
             {PS_STEPS.map((_, i) => (
-              <div key={i} style={{ flex: 1, height: 4, borderRadius: 10, background: i <= psStep ? "#7a8e9e" : COLORS.border, transition: "background 0.3s" }} />
+              <div key={i} style={{ flex: 1, height: 4, borderRadius: 10, background: i <= psStep ? "#818cf8" : COLORS.border, transition: "background 0.3s" }} />
             ))}
           </div>
-          <div style={{ fontSize: 11, color: "#7a8e9e", fontWeight: 700, letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 8 }}>
+          <div style={{ fontSize: 11, color: "#818cf8", fontWeight: 700, letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 8 }}>
             Step {psStep + 1} / {PS_STEPS.length} — {PS_STEPS[psStep].label}
           </div>
           <div style={{ fontSize: 18, fontWeight: 700, lineHeight: 1.5, marginBottom: 16, color: COLORS.text }}>{PS_STEPS[psStep].question}</div>
@@ -873,7 +942,7 @@ export default function App() {
             )}
             <button
               onClick={() => { if (psStep < PS_STEPS.length - 1) { setPsStep(psStep + 1); setShowHint(false); } else finishPS(); }}
-              style={{ flex: 2, background: psStep === PS_STEPS.length - 1 ? COLORS.success : "#7a8e9e", border: "none", borderRadius: 10, color: "#fff", fontSize: 14, fontWeight: 700, padding: 13, cursor: "pointer" }}
+              style={{ flex: 2, background: psStep === PS_STEPS.length - 1 ? COLORS.success : "#818cf8", border: "none", borderRadius: 10, color: "#fff", fontSize: 14, fontWeight: 700, padding: 13, cursor: "pointer" }}
             >
               {psStep === PS_STEPS.length - 1 ? "✓ 完了する" : "次へ →"}
             </button>
@@ -889,10 +958,11 @@ export default function App() {
               </div>
             )}
           </div>
+          <button onClick={savePSDraft} style={{ marginTop: 20, width: "100%", background: "none", border: `1px solid ${COLORS.border}`, borderRadius: 10, color: COLORS.textMuted, fontSize: 13, padding: 12, cursor: "pointer" }}>
+            今日はここまでにする
+          </button>
         </div>
       )}
-
-      {/* CBT */}
       {view === "cbt" && cbtRecord && (
         <div style={{ padding: "20px 16px" }}>
           <div style={{ display: "flex", gap: 4, marginBottom: 28 }}>
@@ -938,6 +1008,9 @@ export default function App() {
               </div>
             )}
           </div>
+          <button onClick={saveCBTDraft} style={{ marginTop: 20, width: "100%", background: "none", border: `1px solid ${COLORS.border}`, borderRadius: 10, color: COLORS.textMuted, fontSize: 13, padding: 12, cursor: "pointer" }}>
+            今日はここまでにする
+          </button>
         </div>
       )}
 

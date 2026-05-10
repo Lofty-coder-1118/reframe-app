@@ -384,7 +384,7 @@ const inp = {
 };
 
 const BottomNav = ({ onBack, onHome }) => (
-  <div style={{ display: "flex", gap: 10, marginTop: 32, paddingTop: 16, borderTop: `1px solid #2a2d3e` }}>
+  <div className="no-print" style={{ display: "flex", gap: 10, marginTop: 32, paddingTop: 16, borderTop: `1px solid #2a2d3e` }}>
     <button onClick={onBack} style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, background: "#1a1d27", border: "1px solid #2a2d3e", borderRadius: 12, color: "#6b7280", fontSize: 14, padding: "12px", cursor: "pointer" }}>
       <IconArrowLeft size={16} />戻る
     </button>
@@ -573,6 +573,10 @@ export default function App() {
   const [crisisPlan, setCrisisPlan] = useState(loadCrisisPlan);
   const [crisisModal, setCrisisModal] = useState(null);
   const [crisisTab, setCrisisTab] = useState("safe");
+
+  const [graphType, setGraphType] = useState("line"); // "line" | "bar"
+  const [graphPeriod, setGraphPeriod] = useState(14); // 14 | 30
+  const [historyTab, setHistoryTab] = useState("graph"); // "graph" | "report" | "list"
 
   const [copingSelectId, setCopingSelectId] = useState(null);
   const [copingConfirm, setCopingConfirm] = useState(null); // { type, editId, text, text2 }
@@ -833,6 +837,19 @@ export default function App() {
           to { opacity: 1; transform: translateY(0); }
         }
         .page { animation: fadeIn 0.18s ease-out; }
+
+        @media print {
+          body { background: white !important; color: black !important; font-family: 'Noto Sans JP', sans-serif; }
+          .no-print { display: none !important; }
+          .print-only { display: block !important; }
+          .print-container { padding: 20px; max-width: 100%; }
+          .print-section { margin-bottom: 20px; border: 1px solid #ccc; border-radius: 8px; padding: 14px; page-break-inside: avoid; }
+          .print-label { font-size: 10px; font-weight: 700; color: #666; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 4px; }
+          .print-value { font-size: 13px; color: #111; line-height: 1.7; }
+          .print-title { font-size: 18px; font-weight: 700; margin-bottom: 4px; color: #111; }
+          .print-meta { font-size: 11px; color: #888; margin-bottom: 16px; }
+        }
+        .print-only { display: none; }
       `}</style>
 
       {/* Header */}
@@ -1191,7 +1208,7 @@ export default function App() {
         <div className="page" style={{ padding: "20px 16px" }}>
 
           {/* タブ */}
-          <div style={{ display: "flex", gap: 8, marginBottom: 24 }}>
+          <div className="no-print" style={{ display: "flex", gap: 8, marginBottom: 24 }}>
             {[
               { id: "safe", label: "Safe", color: COLORS.accent },
               { id: "caution", label: "Caution", color: "#e0a855" },
@@ -1206,7 +1223,7 @@ export default function App() {
 
           {/* Safe */}
           {crisisTab === "safe" && (
-            <div key="safe" className="page" style={{ marginBottom: 24 }}>
+            <div key="safe" className="page no-print" style={{ marginBottom: 24 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
                 <div style={{ width: 10, height: 10, borderRadius: "50%", background: COLORS.accent }} />
                 <div style={{ fontSize: 15, fontWeight: 700, color: COLORS.accent, letterSpacing: 2, textTransform: "uppercase" }}>Safe</div>
@@ -1232,7 +1249,7 @@ export default function App() {
 
           {/* Caution */}
           {crisisTab === "caution" && (
-            <div key="caution" className="page" style={{ marginBottom: 24 }}>
+            <div key="caution" className="page no-print" style={{ marginBottom: 24 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
                 <div style={{ width: 10, height: 10, borderRadius: "50%", background: "#e0a855" }} />
                 <div style={{ fontSize: 15, fontWeight: 700, color: "#e0a855", letterSpacing: 2, textTransform: "uppercase" }}>Caution</div>
@@ -1289,7 +1306,7 @@ export default function App() {
 
           {/* Crisis */}
           {crisisTab === "crisis" && (
-            <div key="crisis" className="page" style={{ marginBottom: 24 }}>
+            <div key="crisis" className="page no-print" style={{ marginBottom: 24 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
                 <div style={{ width: 10, height: 10, borderRadius: "50%", background: COLORS.danger }} />
                 <div style={{ fontSize: 15, fontWeight: 700, color: COLORS.danger, letterSpacing: 2, textTransform: "uppercase" }}>Crisis</div>
@@ -1338,7 +1355,38 @@ export default function App() {
             </div>
           )}
 
+          <button className="no-print" onClick={() => window.print()}
+            style={{ width: "100%", background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 12, color: COLORS.textMuted, fontSize: 14, fontWeight: 700, padding: 14, cursor: "pointer", marginBottom: 8, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+            📄 PDFとして保存する
+          </button>
+
           <BottomNav onBack={() => setView("home")} onHome={() => setView("home")} />
+
+          {/* クライシスプラン印刷用コンテンツ */}
+          <div className="print-only print-container">
+            <div className="print-title">Stride クライシスプラン</div>
+            <div className="print-meta">出力日：{`${t.year}年${parseInt(t.month)}月${parseInt(t.day)}日`}</div>
+            <div className="print-section">
+              <div className="print-label" style={{ color: "#0ea5e9" }}>🟢 Safe — 安定しているときの状態</div>
+              {crisisPlan.safe.length > 0 ? crisisPlan.safe.map((item, i) => <div key={i} className="print-value">・{item.text}</div>) : <div className="print-value" style={{ color: "#999" }}>未記入</div>}
+            </div>
+            <div className="print-section">
+              <div className="print-label" style={{ color: "#e0a855" }}>🟡 Caution — トリガー</div>
+              {crisisPlan.caution_triggers.length > 0 ? crisisPlan.caution_triggers.map((item, i) => <div key={i} className="print-value" style={{ marginBottom: 4 }}>・{item.text}{item.text2 && <span style={{ color: "#666" }}>　→ {item.text2}</span>}</div>) : <div className="print-value" style={{ color: "#999" }}>未記入</div>}
+            </div>
+            <div className="print-section">
+              <div className="print-label" style={{ color: "#e0a855" }}>🟡 Caution — 注意サイン</div>
+              {crisisPlan.caution_signs.length > 0 ? crisisPlan.caution_signs.map((item, i) => <div key={i} className="print-value" style={{ marginBottom: 4 }}>・{item.text}{item.text2 && <span style={{ color: "#666" }}>　→ {item.text2}</span>}</div>) : <div className="print-value" style={{ color: "#999" }}>未記入</div>}
+            </div>
+            <div className="print-section">
+              <div className="print-label" style={{ color: "#f87171" }}>🔴 Crisis — 危機のサイン</div>
+              {crisisPlan.crisis_signs.length > 0 ? crisisPlan.crisis_signs.map((item, i) => <div key={i} className="print-value">・{item.text}</div>) : <div className="print-value" style={{ color: "#999" }}>未記入</div>}
+            </div>
+            <div className="print-section">
+              <div className="print-label" style={{ color: "#f87171" }}>🔴 Crisis — 対処法・連絡先</div>
+              {crisisPlan.crisis_contacts.length > 0 ? crisisPlan.crisis_contacts.map((item, i) => <div key={i} className="print-value">・{item.text}</div>) : <div className="print-value" style={{ color: "#999" }}>未記入</div>}
+            </div>
+          </div>
 
           {/* 入力モーダル */}
           {crisisModal && (
@@ -1392,53 +1440,288 @@ export default function App() {
       )}
 
       {/* CHECKIN HISTORY */}
-      {view === "checkinHistory" && (
-        <div className="page" style={{ padding: "20px 16px" }}>
-          {recentCheckins.every((r) => !r.data) && (
-            <div style={{ textAlign: "center", color: COLORS.textMuted, marginTop: 60, fontSize: 14, lineHeight: 2 }}>
-              まだチェックインの記録がないよ<br />毎日記録すると波が見えてくる
+      {view === "checkinHistory" && (() => {
+        const moodColor = (mood) => mood >= 7 ? COLORS.accent : mood >= 4 ? "#e0a855" : COLORS.danger;
+
+        // 期間分のデータを生成
+        const periodCheckins = Array.from({ length: graphPeriod }, (_, i) => {
+          const d = new Date();
+          d.setDate(d.getDate() - (graphPeriod - 1 - i));
+          const y = String(d.getFullYear());
+          const m = String(d.getMonth() + 1).padStart(2, "0");
+          const day = String(d.getDate()).padStart(2, "0");
+          const dateStr = toDateStr(y, m, day);
+          const found = checkins.find((c) => c.date === dateStr);
+          return { date: dateStr, data: found || null, label: `${parseInt(m)}/${parseInt(day)}` };
+        });
+
+        // 今週（月曜〜今日）のデータを集計
+        const now = new Date();
+        const dayOfWeek = now.getDay();
+        const monday = new Date(now);
+        monday.setDate(now.getDate() - (dayOfWeek === 0 ? 6 : dayOfWeek - 1));
+        const weekDates = Array.from({ length: 7 }, (_, i) => {
+          const d = new Date(monday);
+          d.setDate(monday.getDate() + i);
+          return toDateStr(String(d.getFullYear()), String(d.getMonth() + 1).padStart(2, "0"), String(d.getDate()).padStart(2, "0"));
+        });
+        const weekCheckins = checkins.filter(c => weekDates.includes(c.date));
+        const avgMood = weekCheckins.length > 0 ? (weekCheckins.reduce((s, c) => s + c.mood, 0) / weekCheckins.length).toFixed(1) : null;
+        const weekRecords = records.filter(r => {
+          const rd = new Date(r.date);
+          return rd >= monday && rd <= now;
+        });
+        const cbtCount = weekRecords.filter(r => r.cbt && Object.keys(r.cbt).length > 0).length;
+        const psCount = weekRecords.filter(r => r.ps && Object.keys(r.ps).length > 0).length;
+        const copingCount = weekRecords.filter(r => r.coping).length;
+        const stressCount = weekRecords.length;
+
+        // 感情集計（今週のCBT記録から）
+        const emotionMap = {};
+        weekRecords.forEach(r => {
+          const emotionStr = r.cbt?.emotion || r.cbt?.emotion3 || "";
+          emotionStr.split("、").forEach(e => {
+            const match = e.trim().match(/^(.+?)\s*\d+%$/);
+            if (match) {
+              const name = match[1].trim();
+              emotionMap[name] = (emotionMap[name] || 0) + 1;
+            }
+          });
+        });
+        const topEmotions = Object.entries(emotionMap).sort((a, b) => b[1] - a[1]).slice(0, 3);
+
+        const hasData = periodCheckins.some(c => c.data);
+        const W = 340, H = 140, PAD = 24;
+        const dataPoints = periodCheckins.map((c, i) => ({
+          x: PAD + (i / Math.max(graphPeriod - 1, 1)) * (W - PAD * 2),
+          y: c.data ? H - PAD - ((c.data.mood - 1) / 9) * (H - PAD * 2) : null,
+          mood: c.data?.mood,
+          label: c.label,
+        }));
+
+        return (
+          <div className="page" style={{ padding: "20px 16px" }}>
+            {/* タブ */}
+            <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
+              {[{ v: "graph", label: "グラフ" }, { v: "report", label: "週次レポート" }, { v: "list", label: "一覧" }].map(({ v, label }) => (
+                <button key={v} onClick={() => setHistoryTab(v)}
+                  style={{ flex: 1, padding: "9px 0", borderRadius: 8, border: `1.5px solid ${historyTab === v ? COLORS.accent : COLORS.border}`, background: historyTab === v ? COLORS.accentSoft : COLORS.surface, color: historyTab === v ? COLORS.accent : COLORS.textMuted, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+                  {label}
+                </button>
+              ))}
             </div>
-          )}
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            {recentCheckins.map(({ date, data }) => {
-              const [, m, d] = date.split("-");
-              const label = `${parseInt(m)}月${parseInt(d)}日`;
-              const isToday = date === toDateStr(t.year, t.month, t.day);
-              return (
-                <div key={date} style={{ background: COLORS.surface, borderRadius: 12, padding: "12px 16px", border: `1px solid ${data ? COLORS.accentSoft : COLORS.border}`, opacity: data ? 1 : 0.5 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                    <div style={{ minWidth: 60 }}>
-                      <div style={{ fontSize: 12, color: COLORS.textMuted }}>{label}</div>
-                      {isToday && <div style={{ fontSize: 10, color: COLORS.accent, fontWeight: 700 }}>今日</div>}
-                    </div>
-                    {data ? (
-                      <>
-                        {/* 気分バー */}
-                        <div style={{ flex: 1 }}>
-                          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-                            <div style={{ flex: 1, height: 8, borderRadius: 4, background: COLORS.border, overflow: "hidden" }}>
-                              <div style={{ width: `${data.mood * 10}%`, height: "100%", background: data.mood >= 7 ? COLORS.accent : data.mood >= 4 ? "#e0a855" : COLORS.danger, borderRadius: 4, transition: "width 0.3s" }} />
-                            </div>
-                            <div style={{ fontSize: 14, fontWeight: 700, color: COLORS.text, minWidth: 16 }}>{data.mood}</div>
-                          </div>
-                          <div style={{ display: "flex", gap: 10, fontSize: 11, color: COLORS.textMuted }}>
-                            {data.condition && <span>{data.condition}</span>}
-                            {data.sleep && <span>睡眠 {data.sleep}</span>}
-                            {data.memo && <span style={{ color: COLORS.accent }}>「{data.memo}」</span>}
-                          </div>
-                        </div>
-                      </>
-                    ) : (
-                      <div style={{ fontSize: 13, color: COLORS.textMuted }}>記録なし</div>
-                    )}
+
+            {/* グラフタブ */}
+            {historyTab === "graph" && (
+              <div key="graph" className="page">
+                <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
+                  <div style={{ display: "flex", gap: 4, flex: 1 }}>
+                    {[{ v: "line", label: "折れ線" }, { v: "bar", label: "棒" }].map(({ v, label }) => (
+                      <button key={v} onClick={() => setGraphType(v)}
+                        style={{ flex: 1, padding: "8px", borderRadius: 8, border: `1.5px solid ${graphType === v ? COLORS.accent : COLORS.border}`, background: graphType === v ? COLORS.accentSoft : COLORS.surface, color: graphType === v ? COLORS.accent : COLORS.textMuted, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                  <div style={{ display: "flex", gap: 4, flex: 1 }}>
+                    {[{ v: 14, label: "2週間" }, { v: 30, label: "1ヶ月" }].map(({ v, label }) => (
+                      <button key={v} onClick={() => setGraphPeriod(v)}
+                        style={{ flex: 1, padding: "8px", borderRadius: 8, border: `1.5px solid ${graphPeriod === v ? COLORS.accent : COLORS.border}`, background: graphPeriod === v ? COLORS.accentSoft : COLORS.surface, color: graphPeriod === v ? COLORS.accent : COLORS.textMuted, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+                        {label}
+                      </button>
+                    ))}
                   </div>
                 </div>
-              );
-            })}
+                <div style={{ background: COLORS.surface, borderRadius: 14, padding: "16px", marginBottom: 16, border: `1px solid ${COLORS.border}` }}>
+                  {!hasData ? (
+                    <div style={{ textAlign: "center", color: COLORS.textMuted, fontSize: 13, padding: "40px 0" }}>まだ記録がありません</div>
+                  ) : (
+                    <svg viewBox={`0 0 ${W} ${H}`} style={{ width: "100%", overflow: "visible" }}>
+                      {[1, 3, 5, 7, 10].map(v => {
+                        const y = H - PAD - ((v - 1) / 9) * (H - PAD * 2);
+                        return (
+                          <g key={v}>
+                            <line x1={PAD} y1={y} x2={W - PAD} y2={y} stroke={COLORS.border} strokeWidth="0.5" />
+                            <text x={PAD - 4} y={y} textAnchor="end" dominantBaseline="middle" fill={COLORS.textMuted} fontSize="8">{v}</text>
+                          </g>
+                        );
+                      })}
+                      {graphType === "bar" && dataPoints.map((p, i) => {
+                        if (!p.mood) return null;
+                        const barW = Math.max(4, (W - PAD * 2) / graphPeriod * 0.6);
+                        return <rect key={i} x={p.x - barW / 2} y={p.y} width={barW} height={H - PAD - p.y} fill={moodColor(p.mood)} opacity="0.8" rx="2" />;
+                      })}
+                      {graphType === "line" && (() => {
+                        const pts = dataPoints.filter(p => p.mood != null);
+                        if (pts.length < 2) return null;
+                        return (
+                          <g>
+                            <path d={pts.map((p, i) => `${i === 0 ? "M" : "L"}${p.x},${p.y}`).join(" ")} fill="none" stroke={COLORS.accent} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                            {pts.map((p, i) => <circle key={i} cx={p.x} cy={p.y} r="4" fill={moodColor(p.mood)} stroke={COLORS.surface} strokeWidth="2" />)}
+                          </g>
+                        );
+                      })()}
+                      {dataPoints.filter((_, i) => graphPeriod === 14 ? i % 2 === 0 : i % 5 === 0).map((p, i) => (
+                        <text key={i} x={p.x} y={H - 4} textAnchor="middle" fill={COLORS.textMuted} fontSize="7">{p.label}</text>
+                      ))}
+                    </svg>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* 週次レポートタブ */}
+            {historyTab === "report" && (
+              <div key="report" className="page">
+                <div style={{ fontSize: 12, color: COLORS.textMuted, marginBottom: 16 }}>今週（月〜今日）の記録</div>
+
+                {/* 気分スコア */}
+                <div style={{ background: COLORS.surface, borderRadius: 14, padding: "16px 18px", marginBottom: 12, border: `1px solid ${COLORS.border}` }}>
+                  <div style={{ fontSize: 11, color: COLORS.accent, fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", marginBottom: 10 }}>気分</div>
+                  <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
+                    {avgMood ? (
+                      <>
+                        <div style={{ fontSize: 36, fontWeight: 700, color: COLORS.accent }}>{avgMood}</div>
+                        <div style={{ fontSize: 13, color: COLORS.textMuted }}>/ 10　平均気分スコア</div>
+                      </>
+                    ) : (
+                      <div style={{ fontSize: 13, color: COLORS.textMuted }}>今週のチェックインがありません</div>
+                    )}
+                  </div>
+                  {avgMood && (
+                    <div style={{ fontSize: 12, color: COLORS.textMuted, marginTop: 6 }}>チェックイン {weekCheckins.length}回 / 7日</div>
+                  )}
+                </div>
+
+                {/* 取り組み回数 */}
+                <div style={{ background: COLORS.surface, borderRadius: 14, padding: "16px 18px", marginBottom: 12, border: `1px solid ${COLORS.border}` }}>
+                  <div style={{ fontSize: 11, color: "#818cf8", fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", marginBottom: 12 }}>今週の取り組み</div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                    {[
+                      { label: "ストレス記録", count: stressCount, color: COLORS.accent },
+                      { label: "認知再構成", count: cbtCount, color: COLORS.accent },
+                      { label: "問題解決技法", count: psCount, color: "#818cf8" },
+                      { label: "コーピング", count: copingCount, color: "#e0a855" },
+                    ].map(({ label, count, color }) => (
+                      <div key={label} style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                        <div style={{ fontSize: 13, color: COLORS.textMuted, minWidth: 100 }}>{label}</div>
+                        <div style={{ flex: 1, height: 6, background: COLORS.border, borderRadius: 3, overflow: "hidden" }}>
+                          <div style={{ width: count > 0 ? `${Math.min(count / 7 * 100, 100)}%` : "0%", height: "100%", background: color, borderRadius: 3, transition: "width 0.5s" }} />
+                        </div>
+                        <div style={{ fontSize: 14, fontWeight: 700, color: count > 0 ? color : COLORS.textMuted, minWidth: 24, textAlign: "right" }}>{count}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* よく出た感情 */}
+                {topEmotions.length > 0 && (
+                  <div style={{ background: COLORS.surface, borderRadius: 14, padding: "16px 18px", marginBottom: 12, border: `1px solid ${COLORS.border}` }}>
+                    <div style={{ fontSize: 11, color: "#e0a855", fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", marginBottom: 10 }}>よく出た感情</div>
+                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                      {topEmotions.map(([name, count], i) => (
+                        <div key={name} style={{ padding: "6px 14px", borderRadius: 20, background: i === 0 ? COLORS.accentSoft : COLORS.bg, border: `1px solid ${i === 0 ? COLORS.accent : COLORS.border}`, fontSize: 13, color: i === 0 ? COLORS.accent : COLORS.textMuted }}>
+                          {name} <span style={{ fontSize: 11 }}>{count}回</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {stressCount === 0 && weekCheckins.length === 0 && (
+                  <div style={{ textAlign: "center", color: COLORS.textMuted, fontSize: 13, padding: "20px 0" }}>今週はまだ記録がありません</div>
+                )}
+
+                {/* エクスポートボタン */}
+                <button className="no-print" onClick={() => window.print()}
+                  style={{ width: "100%", background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 12, color: COLORS.textMuted, fontSize: 14, fontWeight: 700, padding: 14, cursor: "pointer", marginTop: 8, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+                  📄 PDFとして保存する
+                </button>
+
+                {/* 印刷用コンテンツ */}
+                <div className="print-only print-container">
+                  <div className="print-title">Stride 週次レポート</div>
+                  <div className="print-meta">出力日：{`${t.year}年${parseInt(t.month)}月${parseInt(t.day)}日`}</div>
+
+                  <div className="print-section">
+                    <div className="print-label">今週の平均気分スコア</div>
+                    <div className="print-value">{avgMood ? `${avgMood} / 10（チェックイン ${weekCheckins.length}回）` : "記録なし"}</div>
+                  </div>
+
+                  <div className="print-section">
+                    <div className="print-label">今週の取り組み</div>
+                    <div className="print-value">
+                      ストレス記録：{stressCount}回　認知再構成：{cbtCount}回　問題解決技法：{psCount}回　コーピング：{copingCount}回
+                    </div>
+                  </div>
+
+                  {topEmotions.length > 0 && (
+                    <div className="print-section">
+                      <div className="print-label">よく出た感情</div>
+                      <div className="print-value">{topEmotions.map(([n, c]) => `${n}（${c}回）`).join("　")}</div>
+                    </div>
+                  )}
+
+                  {weekRecords.length > 0 && (
+                    <div className="print-section">
+                      <div className="print-label">今週のストレス記録</div>
+                      {weekRecords.map((r, i) => (
+                        <div key={i} style={{ marginBottom: 12, paddingBottom: 12, borderBottom: i < weekRecords.length - 1 ? "1px solid #eee" : "none" }}>
+                          <div style={{ fontSize: 12, color: "#888", marginBottom: 2 }}>{formatDate(r.date)}</div>
+                          <div className="print-value" style={{ fontWeight: 700 }}>{r.situation}</div>
+                          {r.cbt?.emotion && <div className="print-value">感情：{r.cbt.emotion}</div>}
+                          {r.cbt?.autoThought && <div className="print-value">自動思考：{r.cbt.autoThought.replace(/\n/g, " / ")}</div>}
+                          {r.cbt?.balanced && <div className="print-value">バランス思考：{r.cbt.balanced}</div>}
+                          {r.ps?.target && <div className="print-value">取り組んだ問題：{r.ps.target}</div>}
+                          {r.coping && <div className="print-value">コーピング：{r.coping}</div>}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* 一覧タブ */}
+            {historyTab === "list" && (
+              <div key="list" className="page" style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                {periodCheckins.slice().reverse().map(({ date, data, label }) => {
+                  const isToday = date === toDateStr(t.year, t.month, t.day);
+                  return (
+                    <div key={date} style={{ background: COLORS.surface, borderRadius: 12, padding: "12px 16px", border: `1px solid ${data ? COLORS.accentSoft : COLORS.border}`, opacity: data ? 1 : 0.4 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                        <div style={{ minWidth: 48 }}>
+                          <div style={{ fontSize: 12, color: COLORS.textMuted }}>{label}</div>
+                          {isToday && <div style={{ fontSize: 10, color: COLORS.accent, fontWeight: 700 }}>今日</div>}
+                        </div>
+                        {data ? (
+                          <div style={{ flex: 1 }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                              <div style={{ flex: 1, height: 6, borderRadius: 3, background: COLORS.border, overflow: "hidden" }}>
+                                <div style={{ width: `${data.mood * 10}%`, height: "100%", background: moodColor(data.mood), borderRadius: 3 }} />
+                              </div>
+                              <div style={{ fontSize: 14, fontWeight: 700, color: COLORS.text, minWidth: 16 }}>{data.mood}</div>
+                            </div>
+                            <div style={{ display: "flex", gap: 10, fontSize: 11, color: COLORS.textMuted }}>
+                              {data.condition && <span>{data.condition}</span>}
+                              {data.sleep && <span>睡眠 {data.sleep}</span>}
+                              {data.memo && <span style={{ color: COLORS.accent }}>「{data.memo}」</span>}
+                            </div>
+                          </div>
+                        ) : (
+                          <div style={{ fontSize: 13, color: COLORS.textMuted }}>記録なし</div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            <BottomNav onBack={() => setView("home")} onHome={() => setView("home")} />
           </div>
-          <BottomNav onBack={() => setView("home")} onHome={() => setView("home")} />
-        </div>
-      )}
+        );
+      })()}
       {view === "checkin" && (
         <div className="page" style={{ padding: "24px 16px" }}>
           {/* 気分スコア */}

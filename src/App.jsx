@@ -857,7 +857,7 @@ export default function App() {
   }
 
   return (
-    <div style={{ position: "relative", minHeight: "100vh", background: COLORS.bg, color: COLORS.text, fontFamily: "'Noto Sans JP', sans-serif", maxWidth: 480, margin: "0 auto", paddingBottom: 80 }}>
+    <div style={{ position: "relative", minHeight: "100vh", background: COLORS.bg, color: COLORS.text, fontFamily: "'Noto Sans JP', sans-serif", maxWidth: 480, margin: "0 auto", paddingBottom: 120 }}>
       <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&display=swap" rel="stylesheet" />
       <style>{`
         @keyframes fadeIn {
@@ -865,6 +865,7 @@ export default function App() {
           to { opacity: 1; transform: translateY(0); }
         }
         .page { animation: fadeIn 0.18s ease-out; }
+        body { padding-bottom: env(safe-area-inset-bottom); }
 
         @media print {
           body { background: white !important; color: black !important; font-family: 'Noto Sans JP', sans-serif; }
@@ -1119,16 +1120,16 @@ export default function App() {
                 {/* 入力 */}
                 <div style={{ background: COLORS.surface, borderRadius: 14, padding: "14px 16px", marginBottom: 16, border: `1px solid ${COLORS.border}` }}>
                   <div style={{ fontSize: 12, color: COLORS.accent, fontWeight: 700, marginBottom: 8 }}>今日できたことを記録する</div>
-                  <div style={{ display: "flex", gap: 8 }}>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                     <input type="text" placeholder="例）30分散歩できた"
                       value={achievementText}
                       onChange={(e) => setAchievementText(e.target.value)}
                       onKeyDown={(e) => e.key === "Enter" && saveAchievement()}
-                      style={{ flex: 1, background: COLORS.bg, border: `1px solid ${COLORS.border}`, borderRadius: 8, color: COLORS.text, fontSize: 14, padding: "10px 12px", outline: "none", fontFamily: "inherit" }}
+                      style={{ width: "100%", background: COLORS.bg, border: `1px solid ${COLORS.border}`, borderRadius: 8, color: COLORS.text, fontSize: 14, padding: "10px 12px", outline: "none", fontFamily: "inherit", boxSizing: "border-box" }}
                     />
                     <button onClick={saveAchievement} disabled={!achievementText.trim()}
-                      style={{ background: achievementText.trim() ? COLORS.accent : COLORS.border, border: "none", borderRadius: 8, color: "#0f1117", fontSize: 13, fontWeight: 700, padding: "10px 16px", cursor: achievementText.trim() ? "pointer" : "default" }}>
-                      追加
+                      style={{ width: "100%", background: achievementText.trim() ? COLORS.accent : COLORS.border, border: "none", borderRadius: 8, color: "#0f1117", fontSize: 13, fontWeight: 700, padding: "10px", cursor: achievementText.trim() ? "pointer" : "default" }}>
+                      追加する
                     </button>
                   </div>
                 </div>

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { IconChartLine, IconPencil, IconListCheck, IconBrain, IconBulb, IconPlus, IconArrowLeft, IconPin, IconHome, IconShield } from "@tabler/icons-react";
+import { IconChartLine, IconPencil, IconListCheck, IconBrain, IconBulb, IconPlus, IconArrowLeft, IconPin, IconHome, IconShield, IconSettings } from "@tabler/icons-react";
 
 const COLORS = {
   bg: "#0f1117",
@@ -418,6 +418,42 @@ const CHECKIN_KEY = "reframe_checkins";
 const COPING_KEY = "reframe_copings";
 const CRISIS_KEY = "stride_crisis";
 const ACHIEVEMENTS_KEY = "stride_achievements";
+const SETTINGS_KEY = "stride_settings";
+const MEDICAL_KEY = "stride_medical";
+
+const loadMedical = () => {
+  try {
+    const saved = localStorage.getItem(MEDICAL_KEY);
+    if (saved) return JSON.parse(saved);
+  } catch (e) {}
+  return [];
+};
+const saveMedical = (data) => {
+  try { localStorage.setItem(MEDICAL_KEY, JSON.stringify(data)); } catch (e) {}
+};
+
+const DEFAULT_SETTINGS = {
+  checkin: true,
+  checkinHistory: true,
+  achievement: true,
+  mindfulness: true,
+  stressLog: true,
+  coping: true,
+  crisis: true,
+  medical: true,
+};
+
+const loadSettings = () => {
+  try {
+    const saved = localStorage.getItem(SETTINGS_KEY);
+    if (saved) return { ...DEFAULT_SETTINGS, ...JSON.parse(saved) };
+  } catch (e) {}
+  return DEFAULT_SETTINGS;
+};
+
+const saveSettings = (data) => {
+  try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(data)); } catch (e) {}
+};
 
 const loadAchievements = () => {
   try {
@@ -596,6 +632,16 @@ export default function App() {
   const [achievementDeleteId, setAchievementDeleteId] = useState(null);
   const [selectedAchievementDate, setSelectedAchievementDate] = useState(null);
 
+  const [settings, setSettings] = useState(loadSettings);
+
+  const [medicalRecords, setMedicalRecords] = useState(loadMedical);
+  const [medicalFilter, setMedicalFilter] = useState("all");
+  const [medicalView, setMedicalView] = useState("list"); // "list" | "new" | "detail"
+  const [medicalDraft, setMedicalDraft] = useState({ date: toDateStr(t.year, t.month, t.day), type: "診察", place: "", talked: "", told: "", nextDate: "" });
+  const [medicalDetailId, setMedicalDetailId] = useState(null);
+  const [medicalEditing, setMedicalEditing] = useState(false);
+  const [medicalEditDraft, setMedicalEditDraft] = useState({});
+
   const [visibleCount, setVisibleCount] = useState(10);
 
   const [mfMinutes, setMfMinutes] = useState(5);
@@ -612,6 +658,8 @@ export default function App() {
   useEffect(() => { saveCopings(copings); }, [copings]);
   useEffect(() => { saveAchievements(achievements); }, [achievements]);
   useEffect(() => { saveCrisisPlan(crisisPlan); }, [crisisPlan]);
+  useEffect(() => { saveSettings(settings); }, [settings]);
+  useEffect(() => { saveMedical(medicalRecords); }, [medicalRecords]);
 
   const sortedCopings = [...copings].sort((a, b) =>
     copingSort === "difficulty" ? a.difficulty - b.difficulty : b.effect - a.effect
@@ -888,7 +936,8 @@ export default function App() {
           {view !== "home" && (
             <button onClick={() => {
               if (view === "newCoping") { setView("coping"); }
-              else if (view === "list" || view === "coping" || view === "checkin" || view === "checkinHistory" || view === "crisis" || view === "guide" || view === "support" || view === "achievement" || view === "mindfulness") { 
+              else if (view === "list" || view === "coping" || view === "checkin" || view === "checkinHistory" || view === "crisis" || view === "guide" || view === "support" || view === "achievement" || view === "mindfulness" || view === "settings" || view === "medical") { 
+                if (view === "medical" && medicalView !== "list") { setMedicalView("list"); setMedicalEditing(false); return; }
                 if (view === "mindfulness" && mfTimerRef) { clearInterval(mfTimerRef); setMfRunning(false); setMfRemaining(null); }
                 setView("home"); 
               }
@@ -914,6 +963,8 @@ export default function App() {
                 {view === "support" && "サポート・フィードバック"}
                 {view === "achievement" && "できたことログ"}
                 {view === "mindfulness" && "マインドフルネス"}
+                {view === "settings" && "カスタマイズ"}
+                {view === "medical" && (medicalView === "list" ? "診察・カウンセリング記録" : medicalView === "new" ? "新しく記録する" : medicalEditing ? "編集" : "記録の詳細")}
                 {view === "approach" && "アプローチを選ぶ"}
                 {view === "cbtSelect" && "コラム法を選ぶ"}
                 {view === "copingSelect" && "コーピングで対処する"}
@@ -928,6 +979,12 @@ export default function App() {
         {view === "detail" && !editing && selectedDetail && (
           <button onClick={() => startEdit(selectedDetail)} style={{ background: COLORS.bg, border: `1px solid ${COLORS.border}`, borderRadius: 8, color: COLORS.textMuted, fontSize: 13, fontWeight: 600, padding: "8px 14px", cursor: "pointer" }}>
             編集
+          </button>
+        )}
+        {view === "home" && (
+          <button onClick={() => setView("settings")}
+            style={{ background: "none", border: "none", color: COLORS.textMuted, cursor: "pointer", padding: 4 }}>
+            <IconSettings size={22} />
           </button>
         )}
       </div>
@@ -977,7 +1034,7 @@ export default function App() {
 
           {/* メニュー */}
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            <button onClick={() => setView("checkinHistory")}
+            {settings.checkinHistory && <button onClick={() => setView("checkinHistory")}
               style={{ width: "100%", background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 14, color: COLORS.text, fontSize: 14, fontWeight: 700, padding: "16px 18px", cursor: "pointer", textAlign: "left" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                 <IconChartLine size={24} color={COLORS.accent} />
@@ -987,8 +1044,8 @@ export default function App() {
                   <div style={{ fontSize: 12, fontWeight: 400, color: COLORS.textMuted, marginTop: 3 }}>過去2週間の気分・体調を振り返る</div>
                 </div>
               </div>
-            </button>
-            <button onClick={() => setView("achievement")}
+            </button>}
+            {settings.achievement && <button onClick={() => setView("achievement")}
               style={{ width: "100%", background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 14, color: COLORS.text, fontSize: 14, fontWeight: 700, padding: "16px 18px", cursor: "pointer", textAlign: "left" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                 <span style={{ fontSize: 22 }}>⭐</span>
@@ -998,8 +1055,8 @@ export default function App() {
                   <div style={{ fontSize: 12, fontWeight: 400, color: COLORS.textMuted, marginTop: 3 }}>小さな前進を積み重ねる</div>
                 </div>
               </div>
-            </button>
-            <button onClick={() => { setMfRunning(false); setMfRemaining(null); setMfMinutes(5); setView("mindfulness"); }}
+            </button>}
+            {settings.mindfulness && <button onClick={() => { setMfRunning(false); setMfRemaining(null); setMfMinutes(5); setView("mindfulness"); }}
               style={{ width: "100%", background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 14, color: COLORS.text, fontSize: 14, fontWeight: 700, padding: "16px 18px", cursor: "pointer", textAlign: "left" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                 <span style={{ fontSize: 22 }}>🧘</span>
@@ -1009,8 +1066,8 @@ export default function App() {
                   <div style={{ fontSize: 12, fontWeight: 400, color: COLORS.textMuted, marginTop: 3 }}>タイマーで静かな時間を作る</div>
                 </div>
               </div>
-            </button>
-            <button onClick={() => setView("list")}
+            </button>}
+            {settings.stressLog && <button onClick={() => setView("list")}
               style={{ width: "100%", background: `linear-gradient(135deg, ${COLORS.accent}20, ${COLORS.accent}08)`, border: `1px solid ${COLORS.accent}40`, borderRadius: 14, color: COLORS.text, fontSize: 14, fontWeight: 700, padding: "16px 18px", cursor: "pointer", textAlign: "left" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                 <IconPencil size={24} color={COLORS.accent} />
@@ -1020,8 +1077,8 @@ export default function App() {
                   <div style={{ fontSize: 12, fontWeight: 400, color: COLORS.textMuted, marginTop: 3 }}>記録の一覧・アプローチワーク</div>
                 </div>
               </div>
-            </button>
-            <button onClick={() => setView("coping")}
+            </button>}
+            {settings.coping && <button onClick={() => setView("coping")}
               style={{ width: "100%", background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 14, color: COLORS.text, fontSize: 14, fontWeight: 700, padding: "16px 18px", cursor: "pointer", textAlign: "left" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                 <IconListCheck size={24} color="#818cf8" />
@@ -1031,8 +1088,8 @@ export default function App() {
                   <div style={{ fontSize: 12, fontWeight: 400, color: COLORS.textMuted, marginTop: 3 }}>自分だけの対処法を管理する</div>
                 </div>
               </div>
-            </button>
-            <button onClick={() => setView("crisis")}
+            </button>}
+            {settings.crisis && <button onClick={() => setView("crisis")}
               style={{ width: "100%", background: COLORS.surface, border: `1px solid #f8716130`, borderRadius: 14, color: COLORS.text, fontSize: 14, fontWeight: 700, padding: "16px 18px", cursor: "pointer", textAlign: "left" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                 <IconShield size={24} color="#f87161" />
@@ -1042,7 +1099,18 @@ export default function App() {
                   <div style={{ fontSize: 12, fontWeight: 400, color: COLORS.textMuted, marginTop: 3 }}>Safe / Caution / Crisis の状態を整理する</div>
                 </div>
               </div>
-            </button>
+            </button>}
+            {settings.medical && <button onClick={() => { setMedicalView("list"); setView("medical"); }}
+              style={{ width: "100%", background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 14, color: COLORS.text, fontSize: 14, fontWeight: 700, padding: "16px 18px", cursor: "pointer", textAlign: "left" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <span style={{ fontSize: 22 }}>🏥</span>
+                <div>
+                  <div style={{ fontSize: 11, color: "#38bdf8", letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 3 }}>Medical</div>
+                  診察・カウンセリング記録
+                  <div style={{ fontSize: 12, fontWeight: 400, color: COLORS.textMuted, marginTop: 3 }}>通院・カウンセリングの記録を残す</div>
+                </div>
+              </div>
+            </button>}
             <button onClick={() => setView("guide")}
               style={{ width: "100%", background: "none", border: `1px solid ${COLORS.border}`, borderRadius: 14, color: COLORS.textMuted, fontSize: 14, fontWeight: 700, padding: "14px 18px", cursor: "pointer", textAlign: "left" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
@@ -1429,6 +1497,171 @@ export default function App() {
               <BottomNav onBack={() => setView("home")} onHome={() => setView("home")} />
             </div>
           )}
+        </div>
+      )}
+
+      {/* MEDICAL */}
+      {view === "medical" && (() => {
+        const filteredRecords = medicalRecords.filter(r => medicalFilter === "all" || r.type === medicalFilter);
+        const detailRecord = medicalRecords.find(r => r.id === medicalDetailId);
+
+        if (medicalView === "new") return (
+          <div className="page" style={{ padding: "20px 16px" }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+              <div>
+                <div style={{ fontSize: 13, color: COLORS.textMuted, marginBottom: 8 }}>日付</div>
+                <DateSelector year={medicalDraft.date.split("-")[0]} month={medicalDraft.date.split("-")[1]} day={medicalDraft.date.split("-")[2]}
+                  onYear={y => setMedicalDraft({...medicalDraft, date: toDateStr(y, medicalDraft.date.split("-")[1], medicalDraft.date.split("-")[2])})}
+                  onMonth={m => setMedicalDraft({...medicalDraft, date: toDateStr(medicalDraft.date.split("-")[0], m, medicalDraft.date.split("-")[2])})}
+                  onDay={d => setMedicalDraft({...medicalDraft, date: toDateStr(medicalDraft.date.split("-")[0], medicalDraft.date.split("-")[1], d)})} />
+              </div>
+              <div>
+                <div style={{ fontSize: 13, color: COLORS.textMuted, marginBottom: 8 }}>種別</div>
+                <div style={{ display: "flex", gap: 8 }}>
+                  {["診察", "カウンセリング", "その他"].map(t => (
+                    <button key={t} onClick={() => setMedicalDraft({...medicalDraft, type: t})}
+                      style={{ flex: 1, padding: "10px", borderRadius: 8, border: `1.5px solid ${medicalDraft.type === t ? COLORS.accent : COLORS.border}`, background: medicalDraft.type === t ? COLORS.accentSoft : COLORS.surface, color: medicalDraft.type === t ? COLORS.accent : COLORS.textMuted, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
+                      {t}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <div style={{ fontSize: 13, color: COLORS.textMuted, marginBottom: 8 }}>場所・担当者名 <span style={{ fontSize: 11 }}>任意</span></div>
+                <input type="text" style={{ ...inp, resize: "none" }} placeholder="例）〇〇クリニック・田中先生" value={medicalDraft.place} onChange={e => setMedicalDraft({...medicalDraft, place: e.target.value})} />
+              </div>
+              <div>
+                <div style={{ fontSize: 13, color: COLORS.textMuted, marginBottom: 8 }}>話したこと</div>
+                <textarea rows={4} style={inp} placeholder="例）最近眠れていないこと、仕事のストレスについて" value={medicalDraft.talked} onChange={e => setMedicalDraft({...medicalDraft, talked: e.target.value})} />
+              </div>
+              <div>
+                <div style={{ fontSize: 13, color: COLORS.textMuted, marginBottom: 8 }}>言われたこと・気づき</div>
+                <textarea rows={4} style={inp} placeholder="例）睡眠の質を上げるために就寝前のスマホを控えるよう言われた" value={medicalDraft.told} onChange={e => setMedicalDraft({...medicalDraft, told: e.target.value})} />
+              </div>
+              <div>
+                <div style={{ fontSize: 13, color: COLORS.textMuted, marginBottom: 8 }}>次回予約日 <span style={{ fontSize: 11 }}>任意</span></div>
+                <input type="text" style={{ ...inp, resize: "none" }} placeholder="例）2週間後・6月15日" value={medicalDraft.nextDate} onChange={e => setMedicalDraft({...medicalDraft, nextDate: e.target.value})} />
+              </div>
+            </div>
+            <div style={{ display: "flex", gap: 10, marginTop: 24 }}>
+              <button onClick={() => setMedicalView("list")} style={{ flex: 1, background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 10, color: COLORS.textMuted, fontSize: 14, padding: 13, cursor: "pointer" }}>キャンセル</button>
+              <button onClick={() => {
+                if (!medicalDraft.talked.trim() && !medicalDraft.told.trim()) return;
+                setMedicalRecords([{ id: Date.now(), ...medicalDraft }, ...medicalRecords]);
+                setMedicalDraft({ date: toDateStr(t.year, t.month, t.day), type: "診察", place: "", talked: "", told: "", nextDate: "" });
+                setMedicalView("list");
+              }} style={{ flex: 2, background: COLORS.accent, border: "none", borderRadius: 10, color: "#0f1117", fontSize: 14, fontWeight: 700, padding: 13, cursor: "pointer" }}>記録する</button>
+            </div>
+          </div>
+        );
+
+        if (medicalView === "detail" && detailRecord) return (
+          <div className="page" style={{ padding: "20px 16px" }}>
+            {!medicalEditing ? (
+              <>
+                <div style={{ fontSize: 12, color: COLORS.textMuted, marginBottom: 4 }}>{formatDate(detailRecord.date)}</div>
+                <div style={{ display: "inline-block", background: COLORS.accentSoft, borderRadius: 6, padding: "3px 10px", fontSize: 12, color: COLORS.accent, fontWeight: 700, marginBottom: 16 }}>{detailRecord.type}</div>
+                {detailRecord.place && <div style={{ background: COLORS.surface, borderRadius: 10, padding: "12px 14px", fontSize: 14, color: COLORS.textMuted, marginBottom: 16, border: `1px solid ${COLORS.border}` }}>{detailRecord.place}</div>}
+                {[{ label: "話したこと", value: detailRecord.talked }, { label: "言われたこと・気づき", value: detailRecord.told }, { label: "次回予約日", value: detailRecord.nextDate }].map(({ label, value }) => value ? (
+                  <div key={label} style={{ marginBottom: 14 }}>
+                    <div style={{ fontSize: 11, color: COLORS.accent, fontWeight: 700, letterSpacing: 1, marginBottom: 5, textTransform: "uppercase" }}>{label}</div>
+                    <div style={{ background: COLORS.surface, borderRadius: 10, padding: "12px 14px", fontSize: 14, lineHeight: 1.7, border: `1px solid ${COLORS.border}`, color: COLORS.text }}>{value}</div>
+                  </div>
+                ) : null)}
+                <div style={{ display: "flex", gap: 10, marginTop: 8 }}>
+                  <button onClick={() => { setMedicalEditDraft({...detailRecord}); setMedicalEditing(true); }}
+                    style={{ flex: 1, background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 10, color: COLORS.textMuted, fontSize: 14, padding: 13, cursor: "pointer" }}>編集</button>
+                  <button onClick={() => { setMedicalRecords(medicalRecords.filter(r => r.id !== detailRecord.id)); setMedicalView("list"); }}
+                    style={{ flex: 1, background: COLORS.danger, border: "none", borderRadius: 10, color: "#fff", fontSize: 14, fontWeight: 700, padding: 13, cursor: "pointer" }}>削除</button>
+                </div>
+                <BottomNav onBack={() => setMedicalView("list")} onHome={() => setView("home")} />
+              </>
+            ) : (
+              <>
+                <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                  {[{ label: "話したこと", key: "talked", rows: 4 }, { label: "言われたこと・気づき", key: "told", rows: 4 }, { label: "次回予約日", key: "nextDate", rows: 1 }].map(({ label, key, rows }) => (
+                    <div key={key}>
+                      <div style={{ fontSize: 13, color: COLORS.textMuted, marginBottom: 8 }}>{label}</div>
+                      <textarea rows={rows} style={inp} value={medicalEditDraft[key] || ""} onChange={e => setMedicalEditDraft({...medicalEditDraft, [key]: e.target.value})} />
+                    </div>
+                  ))}
+                </div>
+                <div style={{ display: "flex", gap: 10, marginTop: 24 }}>
+                  <button onClick={() => setMedicalEditing(false)} style={{ flex: 1, background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 10, color: COLORS.textMuted, fontSize: 14, padding: 13, cursor: "pointer" }}>キャンセル</button>
+                  <button onClick={() => { setMedicalRecords(medicalRecords.map(r => r.id === detailRecord.id ? {...r, ...medicalEditDraft} : r)); setMedicalEditing(false); }}
+                    style={{ flex: 2, background: COLORS.accent, border: "none", borderRadius: 10, color: "#0f1117", fontSize: 14, fontWeight: 700, padding: 13, cursor: "pointer" }}>保存する</button>
+                </div>
+              </>
+            )}
+          </div>
+        );
+
+        return (
+          <div className="page" style={{ padding: "20px 16px" }}>
+            <button onClick={() => { setMedicalDraft({ date: toDateStr(t.year, t.month, t.day), type: "診察", place: "", talked: "", told: "", nextDate: "" }); setMedicalView("new"); }}
+              style={{ width: "100%", background: COLORS.accent, border: "none", borderRadius: 12, color: "#0f1117", fontSize: 14, fontWeight: 700, padding: 14, cursor: "pointer", marginBottom: 16, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+              <IconPlus size={16} />新しく記録する
+            </button>
+
+            {/* フィルター */}
+            <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
+              {["all", "診察", "カウンセリング", "その他"].map(f => (
+                <button key={f} onClick={() => setMedicalFilter(f)}
+                  style={{ flex: 1, padding: "8px 4px", borderRadius: 8, border: `1.5px solid ${medicalFilter === f ? COLORS.accent : COLORS.border}`, background: medicalFilter === f ? COLORS.accentSoft : COLORS.surface, color: medicalFilter === f ? COLORS.accent : COLORS.textMuted, fontSize: 11, fontWeight: 700, cursor: "pointer" }}>
+                  {f === "all" ? "すべて" : f}
+                </button>
+              ))}
+            </div>
+
+            {filteredRecords.length === 0 ? (
+              <div style={{ textAlign: "center", color: COLORS.textMuted, fontSize: 14, padding: "40px 0", lineHeight: 2 }}>まだ記録がないよ</div>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                {filteredRecords.map(r => (
+                  <div key={r.id} onClick={() => { setMedicalDetailId(r.id); setMedicalEditing(false); setMedicalView("detail"); }}
+                    style={{ background: COLORS.surface, borderRadius: 12, padding: "14px 16px", border: `1px solid ${COLORS.border}`, cursor: "pointer" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                      <div style={{ fontSize: 12, color: COLORS.textMuted }}>{formatDate(r.date)}</div>
+                      <div style={{ background: COLORS.accentSoft, borderRadius: 4, padding: "2px 8px", fontSize: 11, color: COLORS.accent, fontWeight: 700 }}>{r.type}</div>
+                      {r.place && <div style={{ fontSize: 12, color: COLORS.textMuted }}>{r.place}</div>}
+                    </div>
+                    {r.talked && <div style={{ fontSize: 13, color: COLORS.text, lineHeight: 1.6, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>{r.talked}</div>}
+                  </div>
+                ))}
+              </div>
+            )}
+            <BottomNav onBack={() => setView("home")} onHome={() => setView("home")} />
+          </div>
+        );
+      })()}
+
+      {/* SETTINGS */}
+      {view === "settings" && (
+        <div className="page" style={{ padding: "20px 16px" }}>
+          <div style={{ fontSize: 13, color: COLORS.textMuted, marginBottom: 20 }}>ホーム画面に表示する機能を選べます</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+            {[
+              { key: "checkinHistory", label: "チェックイン履歴", desc: "気分・体調のグラフと履歴" },
+              { key: "achievement", label: "できたことログ", desc: "小さな前進を積み重ねる" },
+              { key: "mindfulness", label: "マインドフルネス", desc: "タイマーで静かな時間を作る" },
+              { key: "stressLog", label: "ストレス記録", desc: "記録の一覧・アプローチワーク" },
+              { key: "coping", label: "コーピングリスト", desc: "自分だけの対処法を管理する" },
+              { key: "crisis", label: "クライシスプラン", desc: "Safe / Caution / Crisis の状態を整理する" },
+              { key: "medical", label: "診察・カウンセリング記録", desc: "通院・カウンセリングの記録を残す" },
+            ].map(({ key, label, desc }) => (
+              <div key={key} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: COLORS.surface, borderRadius: 12, padding: "14px 16px", marginBottom: 8, border: `1px solid ${COLORS.border}` }}>
+                <div>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: COLORS.text }}>{label}</div>
+                  <div style={{ fontSize: 12, color: COLORS.textMuted, marginTop: 2 }}>{desc}</div>
+                </div>
+                <button onClick={() => setSettings({ ...settings, [key]: !settings[key] })}
+                  style={{ width: 48, height: 28, borderRadius: 14, border: "none", background: settings[key] ? COLORS.accent : COLORS.border, cursor: "pointer", position: "relative", transition: "background 0.2s", flexShrink: 0 }}>
+                  <div style={{ width: 22, height: 22, borderRadius: "50%", background: "#fff", position: "absolute", top: 3, left: settings[key] ? 23 : 3, transition: "left 0.2s" }} />
+                </button>
+              </div>
+            ))}
+          </div>
+          <BottomNav onBack={() => setView("home")} onHome={() => setView("home")} />
         </div>
       )}
 

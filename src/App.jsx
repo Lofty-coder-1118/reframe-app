@@ -507,31 +507,31 @@ const ONBOARDING_SLIDES = [
   {
     icon: "🌱",
     title: "Strideへようこそ",
-    desc: "毎日の記録と振り返りを通じて、ストレスを引きずらない構造を作るアプリです。再発防止のための日常習慣を、一歩ずつ積み重ねていきましょう。",
+    desc: "毎日の記録と振り返りで、ストレスを引きずらない習慣を作るアプリです。",
     color: COLORS.accent,
   },
   {
     icon: "📊",
     title: "毎日のチェックイン",
-    desc: "気分・体調・睡眠を毎日記録してパターンを把握。グラフや週次レポートで自分の状態を振り返れます。",
+    desc: "気分・体調・睡眠を毎日記録。グラフや週次レポートで自分のパターンを把握できます。",
     color: COLORS.accent,
   },
   {
     icon: "🧠",
     title: "ストレスに向き合う",
-    desc: "ストレスを記録したら、認知再構成（3/7コラム法）・問題解決技法・コーピングから自分に合ったアプローチを選べます。途中保存もできます。",
+    desc: "認知再構成・問題解決技法・コーピングから自分に合ったアプローチを選べます。",
     color: "#818cf8",
   },
   {
     icon: "⭐",
     title: "自分を知るツール",
-    desc: "できたことログで小さな前進を積み重ね、マインドフルネスで心を整え、クライシスプランで安定のための自分のマニュアルを作れます。",
+    desc: "できたことログ・マインドフルネス・クライシスプランで再発防止の基盤を作ります。",
     color: "#e0a855",
   },
   {
     icon: "📖",
     title: "詳しくはガイドへ",
-    desc: "各機能の詳しい使い方はホーム画面の「使い方ガイド」からいつでも確認できます。まずは気軽に始めてみましょう。",
+    desc: "各機能の詳しい使い方はホームの「使い方ガイド」からいつでも確認できます。",
     color: COLORS.accent,
   },
 ];
@@ -820,26 +820,26 @@ export default function App() {
     const slide = ONBOARDING_SLIDES[onboardSlide];
     const isLast = onboardSlide === ONBOARDING_SLIDES.length - 1;
     return (
-      <div style={{ minHeight: "100vh", background: COLORS.bg, color: COLORS.text, fontFamily: "'Noto Sans JP', sans-serif", maxWidth: 480, margin: "0 auto", padding: "24px 24px 100px", boxSizing: "border-box" }}>
+      <div style={{ background: COLORS.bg, color: COLORS.text, fontFamily: "'Noto Sans JP', sans-serif" }}>
         <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&display=swap" rel="stylesheet" />
         <style>{`@keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } } .slide { animation: fadeIn 0.2s ease-out; }`}</style>
 
         {/* プログレスドット */}
-        <div style={{ display: "flex", gap: 6, justifyContent: "center", marginBottom: 16 }}>
+        <div style={{ display: "flex", gap: 6, justifyContent: "center", paddingTop: 48 }}>
           {ONBOARDING_SLIDES.map((_, i) => (
             <div key={i} style={{ width: i === onboardSlide ? 20 : 6, height: 6, borderRadius: 3, background: i === onboardSlide ? slide.color : COLORS.border, transition: "all 0.3s" }} />
           ))}
         </div>
 
         {/* スライドコンテンツ */}
-        <div key={onboardSlide} className="slide" style={{ display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", paddingTop: 40 }}>
-          <div style={{ fontSize: 48, marginBottom: 16 }}>{slide.icon}</div>
+        <div key={onboardSlide} className="slide" style={{ padding: "32px 24px 0", display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center" }}>
+          <div style={{ fontSize: 52, marginBottom: 20 }}>{slide.icon}</div>
           <div style={{ fontSize: 20, fontWeight: 700, color: COLORS.text, marginBottom: 12, lineHeight: 1.4 }}>{slide.title}</div>
-          <div style={{ fontSize: 14, color: COLORS.textMuted, lineHeight: 1.8, maxWidth: 320 }}>{slide.desc}</div>
+          <div style={{ fontSize: 14, color: COLORS.textMuted, lineHeight: 1.8, maxWidth: 300 }}>{slide.desc}</div>
         </div>
 
         {/* ボタン（固定） */}
-        <div style={{ position: "fixed", bottom: 32, left: "50%", transform: "translateX(-50%)", width: "calc(100% - 48px)", maxWidth: 432, display: "flex", gap: 10 }}>
+        <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, padding: "16px 24px 40px", background: COLORS.bg, display: "flex", gap: 10 }}>
           {onboardSlide > 0 && (
             <button onClick={() => setOnboardSlide(onboardSlide - 1)}
               style={{ flex: 1, background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 12, color: COLORS.textMuted, fontSize: 14, padding: 14, cursor: "pointer" }}>

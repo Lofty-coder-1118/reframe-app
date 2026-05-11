@@ -420,6 +420,18 @@ const CRISIS_KEY = "stride_crisis";
 const ACHIEVEMENTS_KEY = "stride_achievements";
 const SETTINGS_KEY = "stride_settings";
 const MEDICAL_KEY = "stride_medical";
+const MEMO_KEY = "stride_memo";
+
+const loadMemo = () => {
+  try {
+    const saved = localStorage.getItem(MEMO_KEY);
+    if (saved) return JSON.parse(saved);
+  } catch (e) {}
+  return [];
+};
+const saveMemo = (data) => {
+  try { localStorage.setItem(MEMO_KEY, JSON.stringify(data)); } catch (e) {}
+};
 
 const loadMedical = () => {
   try {
@@ -441,6 +453,7 @@ const DEFAULT_SETTINGS = {
   coping: true,
   crisis: true,
   medical: true,
+  memo: true,
 };
 
 const loadSettings = () => {
@@ -642,6 +655,13 @@ export default function App() {
   const [medicalEditing, setMedicalEditing] = useState(false);
   const [medicalEditDraft, setMedicalEditDraft] = useState({});
 
+  const [memos, setMemos] = useState(loadMemo);
+  const [memoView, setMemoView] = useState("list");
+  const [memoDraft, setMemoDraft] = useState({ date: toDateStr(t.year, t.month, t.day), title: "", body: "" });
+  const [memoDetailId, setMemoDetailId] = useState(null);
+  const [memoEditing, setMemoEditing] = useState(false);
+  const [memoEditDraft, setMemoEditDraft] = useState({});
+
   const [visibleCount, setVisibleCount] = useState(10);
 
   const [mfMinutes, setMfMinutes] = useState(5);
@@ -660,6 +680,7 @@ export default function App() {
   useEffect(() => { saveCrisisPlan(crisisPlan); }, [crisisPlan]);
   useEffect(() => { saveSettings(settings); }, [settings]);
   useEffect(() => { saveMedical(medicalRecords); }, [medicalRecords]);
+  useEffect(() => { saveMemo(memos); }, [memos]);
 
   const sortedCopings = [...copings].sort((a, b) =>
     copingSort === "difficulty" ? a.difficulty - b.difficulty : b.effect - a.effect
@@ -936,8 +957,9 @@ export default function App() {
           {view !== "home" && (
             <button onClick={() => {
               if (view === "newCoping") { setView("coping"); }
-              else if (view === "list" || view === "coping" || view === "checkin" || view === "checkinHistory" || view === "crisis" || view === "guide" || view === "support" || view === "achievement" || view === "mindfulness" || view === "settings" || view === "medical") { 
+              else if (view === "list" || view === "coping" || view === "checkin" || view === "checkinHistory" || view === "crisis" || view === "guide" || view === "support" || view === "achievement" || view === "mindfulness" || view === "settings" || view === "medical" || view === "memo") { 
                 if (view === "medical" && medicalView !== "list") { setMedicalView("list"); setMedicalEditing(false); return; }
+                if (view === "memo" && memoView !== "list") { setMemoView("list"); setMemoEditing(false); return; }
                 if (view === "mindfulness" && mfTimerRef) { clearInterval(mfTimerRef); setMfRunning(false); setMfRemaining(null); }
                 setView("home"); 
               }
@@ -965,6 +987,7 @@ export default function App() {
                 {view === "mindfulness" && "マインドフルネス"}
                 {view === "settings" && "カスタマイズ"}
                 {view === "medical" && (medicalView === "list" ? "診察・カウンセリング記録" : medicalView === "new" ? "新しく記録する" : medicalEditing ? "編集" : "記録の詳細")}
+                {view === "memo" && (memoView === "list" ? "メモ" : memoView === "new" ? "新しいメモ" : memoEditing ? "編集" : "メモの詳細")}
                 {view === "approach" && "アプローチを選ぶ"}
                 {view === "cbtSelect" && "コラム法を選ぶ"}
                 {view === "copingSelect" && "コーピングで対処する"}
@@ -1108,6 +1131,17 @@ export default function App() {
                   <div style={{ fontSize: 11, color: "#38bdf8", letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 3 }}>Medical</div>
                   診察・カウンセリング記録
                   <div style={{ fontSize: 12, fontWeight: 400, color: COLORS.textMuted, marginTop: 3 }}>通院・カウンセリングの記録を残す</div>
+                </div>
+              </div>
+            </button>}
+            {settings.memo && <button onClick={() => { setMemoView("list"); setView("memo"); }}
+              style={{ width: "100%", background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 14, color: COLORS.text, fontSize: 14, fontWeight: 700, padding: "16px 18px", cursor: "pointer", textAlign: "left" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <span style={{ fontSize: 22 }}>📝</span>
+                <div>
+                  <div style={{ fontSize: 11, color: COLORS.textMuted, letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 3 }}>Memo</div>
+                  メモ
+                  <div style={{ fontSize: 12, fontWeight: 400, color: COLORS.textMuted, marginTop: 3 }}>日付＋タイトル＋本文を自由に記録</div>
                 </div>
               </div>
             </button>}
@@ -1635,6 +1669,103 @@ export default function App() {
         );
       })()}
 
+      {/* MEMO */}
+      {view === "memo" && (() => {
+        const detailMemo = memos.find(m => m.id === memoDetailId);
+
+        if (memoView === "new") return (
+          <div className="page" style={{ padding: "20px 16px" }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+              <div>
+                <div style={{ fontSize: 13, color: COLORS.textMuted, marginBottom: 8 }}>日付</div>
+                <DateSelector year={memoDraft.date.split("-")[0]} month={memoDraft.date.split("-")[1]} day={memoDraft.date.split("-")[2]}
+                  onYear={y => setMemoDraft({...memoDraft, date: toDateStr(y, memoDraft.date.split("-")[1], memoDraft.date.split("-")[2])})}
+                  onMonth={m => setMemoDraft({...memoDraft, date: toDateStr(memoDraft.date.split("-")[0], m, memoDraft.date.split("-")[2])})}
+                  onDay={d => setMemoDraft({...memoDraft, date: toDateStr(memoDraft.date.split("-")[0], memoDraft.date.split("-")[1], d)})} />
+              </div>
+              <div>
+                <div style={{ fontSize: 13, color: COLORS.textMuted, marginBottom: 8 }}>タイトル <span style={{ fontSize: 11 }}>任意</span></div>
+                <input type="text" style={{ ...inp, resize: "none" }} placeholder="例）デイケア遅刻" value={memoDraft.title} onChange={e => setMemoDraft({...memoDraft, title: e.target.value})} />
+              </div>
+              <div>
+                <div style={{ fontSize: 13, color: COLORS.textMuted, marginBottom: 8 }}>内容</div>
+                <textarea rows={8} style={inp} placeholder="自由に書いてください" value={memoDraft.body} onChange={e => setMemoDraft({...memoDraft, body: e.target.value})} />
+              </div>
+            </div>
+            <div style={{ display: "flex", gap: 10, marginTop: 24 }}>
+              <button onClick={() => setMemoView("list")} style={{ flex: 1, background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 10, color: COLORS.textMuted, fontSize: 14, padding: 13, cursor: "pointer" }}>キャンセル</button>
+              <button onClick={() => {
+                if (!memoDraft.body.trim()) return;
+                setMemos([{ id: Date.now(), ...memoDraft }, ...memos]);
+                setMemoDraft({ date: toDateStr(t.year, t.month, t.day), title: "", body: "" });
+                setMemoView("list");
+              }} style={{ flex: 2, background: COLORS.accent, border: "none", borderRadius: 10, color: "#0f1117", fontSize: 14, fontWeight: 700, padding: 13, cursor: "pointer" }}>保存する</button>
+            </div>
+          </div>
+        );
+
+        if (memoView === "detail" && detailMemo) return (
+          <div className="page" style={{ padding: "20px 16px" }}>
+            {!memoEditing ? (
+              <>
+                <div style={{ fontSize: 12, color: COLORS.textMuted, marginBottom: 8 }}>{formatDate(detailMemo.date)}</div>
+                {detailMemo.title && <div style={{ fontSize: 18, fontWeight: 700, color: COLORS.text, marginBottom: 16, lineHeight: 1.4 }}>{detailMemo.title}</div>}
+                <div style={{ background: COLORS.surface, borderRadius: 10, padding: "14px 16px", fontSize: 14, lineHeight: 1.8, border: `1px solid ${COLORS.border}`, color: COLORS.text, whiteSpace: "pre-wrap" }}>{detailMemo.body}</div>
+                <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
+                  <button onClick={() => { setMemoEditDraft({...detailMemo}); setMemoEditing(true); }}
+                    style={{ flex: 1, background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 10, color: COLORS.textMuted, fontSize: 14, padding: 13, cursor: "pointer" }}>編集</button>
+                  <button onClick={() => { setMemos(memos.filter(m => m.id !== detailMemo.id)); setMemoView("list"); }}
+                    style={{ flex: 1, background: COLORS.danger, border: "none", borderRadius: 10, color: "#fff", fontSize: 14, fontWeight: 700, padding: 13, cursor: "pointer" }}>削除</button>
+                </div>
+                <BottomNav onBack={() => setMemoView("list")} onHome={() => setView("home")} />
+              </>
+            ) : (
+              <>
+                <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                  <div>
+                    <div style={{ fontSize: 13, color: COLORS.textMuted, marginBottom: 8 }}>タイトル</div>
+                    <input type="text" style={{ ...inp, resize: "none" }} value={memoEditDraft.title || ""} onChange={e => setMemoEditDraft({...memoEditDraft, title: e.target.value})} />
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 13, color: COLORS.textMuted, marginBottom: 8 }}>内容</div>
+                    <textarea rows={8} style={inp} value={memoEditDraft.body || ""} onChange={e => setMemoEditDraft({...memoEditDraft, body: e.target.value})} />
+                  </div>
+                </div>
+                <div style={{ display: "flex", gap: 10, marginTop: 24 }}>
+                  <button onClick={() => setMemoEditing(false)} style={{ flex: 1, background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 10, color: COLORS.textMuted, fontSize: 14, padding: 13, cursor: "pointer" }}>キャンセル</button>
+                  <button onClick={() => { setMemos(memos.map(m => m.id === detailMemo.id ? {...m, ...memoEditDraft} : m)); setMemoEditing(false); }}
+                    style={{ flex: 2, background: COLORS.accent, border: "none", borderRadius: 10, color: "#0f1117", fontSize: 14, fontWeight: 700, padding: 13, cursor: "pointer" }}>保存する</button>
+                </div>
+              </>
+            )}
+          </div>
+        );
+
+        return (
+          <div className="page" style={{ padding: "20px 16px" }}>
+            <button onClick={() => { setMemoDraft({ date: toDateStr(t.year, t.month, t.day), title: "", body: "" }); setMemoView("new"); }}
+              style={{ width: "100%", background: COLORS.accent, border: "none", borderRadius: 12, color: "#0f1117", fontSize: 14, fontWeight: 700, padding: 14, cursor: "pointer", marginBottom: 16, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+              <IconPlus size={16} />新しいメモを作成
+            </button>
+            {memos.length === 0 ? (
+              <div style={{ textAlign: "center", color: COLORS.textMuted, fontSize: 14, padding: "40px 0", lineHeight: 2 }}>まだメモがないよ</div>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                {memos.map(m => (
+                  <div key={m.id} onClick={() => { setMemoDetailId(m.id); setMemoEditing(false); setMemoView("detail"); }}
+                    style={{ background: COLORS.surface, borderRadius: 12, padding: "14px 16px", border: `1px solid ${COLORS.border}`, cursor: "pointer" }}>
+                    <div style={{ fontSize: 12, color: COLORS.textMuted, marginBottom: 4 }}>{formatDate(m.date)}</div>
+                    {m.title && <div style={{ fontSize: 14, fontWeight: 700, color: COLORS.text, marginBottom: 4 }}>{m.title}</div>}
+                    <div style={{ fontSize: 13, color: COLORS.textMuted, lineHeight: 1.6, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>{m.body}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+            <BottomNav onBack={() => setView("home")} onHome={() => setView("home")} />
+          </div>
+        );
+      })()}
+
       {/* SETTINGS */}
       {view === "settings" && (
         <div className="page" style={{ padding: "20px 16px" }}>
@@ -1648,6 +1779,7 @@ export default function App() {
               { key: "coping", label: "コーピングリスト", desc: "自分だけの対処法を管理する" },
               { key: "crisis", label: "クライシスプラン", desc: "Safe / Caution / Crisis の状態を整理する" },
               { key: "medical", label: "診察・カウンセリング記録", desc: "通院・カウンセリングの記録を残す" },
+              { key: "memo", label: "メモ", desc: "日付＋タイトル＋本文を自由に記録" },
             ].map(({ key, label, desc }) => (
               <div key={key} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: COLORS.surface, borderRadius: 12, padding: "14px 16px", marginBottom: 8, border: `1px solid ${COLORS.border}` }}>
                 <div>

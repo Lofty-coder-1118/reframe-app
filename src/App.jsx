@@ -1466,17 +1466,16 @@ export default function App() {
           <div style={{ fontSize: 13, color: COLORS.textMuted, marginBottom: 20 }}>診察・カウンセリングをサポートする機能です</div>
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             <button onClick={() => setView("bridgePerson")}
-              style={{ width: "100%", background: `linear-gradient(135deg, ${COLORS.accent}25, ${COLORS.accent}10)`, border: `1.5px solid ${COLORS.accent}80`, borderRadius: 16, color: COLORS.text, fontSize: 14, fontWeight: 700, padding: "20px 18px", cursor: "pointer", textAlign: "left", boxShadow: `0 0 20px ${COLORS.accent}18` }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-                <div style={{ width: 44, height: 44, borderRadius: 12, background: COLORS.accent, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                  <IconChartLine size={24} color="#0f1117" />
+              style={{ width: "100%", background: `linear-gradient(135deg, ${COLORS.accent}22, ${COLORS.accent}08)`, border: `1.5px solid ${COLORS.accent}70`, borderRadius: 16, color: COLORS.text, padding: "20px 18px", cursor: "pointer", textAlign: "left", boxShadow: `0 2px 16px ${COLORS.accent}14` }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+                <div style={{ width: 28, height: 28, borderRadius: 8, background: COLORS.accent, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  <IconChartLine size={16} color="#0f1117" />
                 </div>
-                <div>
-                  <div style={{ fontSize: 11, color: COLORS.accent, letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 4, fontWeight: 800 }}>Bridge Session</div>
-                  <div style={{ fontSize: 15, fontWeight: 700, color: COLORS.text, marginBottom: 3 }}>診察・カウンセリングに臨む</div>
-                  <div style={{ fontSize: 12, fontWeight: 400, color: COLORS.textMuted }}>記録を一覧し、言われたことをその場でメモする</div>
-                </div>
+                <div style={{ fontSize: 11, color: COLORS.accent, letterSpacing: 2, textTransform: "uppercase", fontWeight: 800 }}>Feature</div>
               </div>
+              <div style={{ fontSize: 22, fontWeight: 800, color: COLORS.accent, letterSpacing: 0.5, marginBottom: 4 }}>Bridge Session</div>
+              <div style={{ fontSize: 13, color: COLORS.text, fontWeight: 500, marginBottom: 8 }}>面談・診察のサポートツール</div>
+              <div style={{ fontSize: 12, color: COLORS.textMuted, lineHeight: 1.6 }}>記録を一覧し、相手に伝えたいことを確認。言われたことをその場でメモできます。</div>
             </button>
             <button onClick={() => { setTellTab("pending"); setView("tellMemos"); }}
               style={{ width: "100%", background: `linear-gradient(135deg, #818cf815, #818cf805)`, border: `1px solid #818cf840`, borderRadius: 14, color: COLORS.text, fontSize: 14, fontWeight: 700, padding: "16px 18px", cursor: "pointer", textAlign: "left" }}>

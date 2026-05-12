@@ -446,6 +446,23 @@ const ACHIEVEMENTS_KEY = "stride_achievements";
 const MEDICAL_KEY = "stride_medical";
 const MEMO_KEY = "stride_memo";
 
+const TELL_PEOPLE_KEY = "stride_tell_people";
+const TELL_MEMOS_KEY = "stride_tell_memos";
+
+const loadTellPeople = () => {
+  try { const s = localStorage.getItem(TELL_PEOPLE_KEY); if (s) return JSON.parse(s); } catch (e) {}
+  return [];
+};
+const saveTellPeople = (d) => { try { localStorage.setItem(TELL_PEOPLE_KEY, JSON.stringify(d)); } catch (e) {} };
+
+const loadTellMemos = () => {
+  try { const s = localStorage.getItem(TELL_MEMOS_KEY); if (s) return JSON.parse(s); } catch (e) {}
+  return [];
+};
+const saveTellMemos = (d) => { try { localStorage.setItem(TELL_MEMOS_KEY, JSON.stringify(d)); } catch (e) {} };
+
+const TELL_PERSON_TYPES = ["主治医", "精神保健福祉士", "カウンセラー", "その他"];
+
 const loadMemo = () => {
   try {
     const saved = localStorage.getItem(MEMO_KEY);
@@ -548,7 +565,7 @@ const setPwaPrompted = () => {
 const ALL_STORAGE_KEYS = [
   "reframe_records", "reframe_checkins", "reframe_copings",
   "stride_crisis", "stride_achievements", "stride_agreed", "stride_onboarded",
-  "stride_medical", "stride_memo",
+  "stride_medical", "stride_memo", "stride_tell_people", "stride_tell_memos",
 ];
 
 const exportData = () => {
@@ -709,6 +726,15 @@ export default function App() {
   const [memoEditing, setMemoEditing] = useState(false);
   const [memoEditDraft, setMemoEditDraft] = useState({});
 
+  const [tellPeople, setTellPeople] = useState(loadTellPeople);
+  const [tellMemos, setTellMemos] = useState(loadTellMemos);
+  const [tellTab, setTellTab] = useState("pending");
+  const [tellDetailId, setTellDetailId] = useState(null);
+  const [tellNewContent, setTellNewContent] = useState("");
+  const [tellNewPersonIds, setTellNewPersonIds] = useState([]);
+  const [tellNewPersonName, setTellNewPersonName] = useState("");
+  const [tellNewPersonType, setTellNewPersonType] = useState("その他");
+
   const [visibleCount, setVisibleCount] = useState(10);
 
   const [mfMinutes, setMfMinutes] = useState(5);
@@ -733,6 +759,8 @@ export default function App() {
   useEffect(() => { saveCrisisPlan(crisisPlan); }, [crisisPlan]);
   useEffect(() => { saveMedical(medicalRecords); }, [medicalRecords]);
   useEffect(() => { saveMemo(memos); }, [memos]);
+  useEffect(() => { saveTellPeople(tellPeople); }, [tellPeople]);
+  useEffect(() => { saveTellMemos(tellMemos); }, [tellMemos]);
 
   const sortedCopings = [...copings].sort((a, b) =>
     copingSort === "difficulty" ? a.difficulty - b.difficulty : b.effect - a.effect
@@ -891,6 +919,42 @@ export default function App() {
 
   const deleteCrisisItem = (type, id) => {
     setCrisisPlan((prev) => ({ ...prev, [type]: prev[type].filter((i) => i.id !== id) }));
+  };
+
+  const saveTellMemo = () => {
+    if (!tellNewContent.trim() || tellNewPersonIds.length === 0) return;
+    setTellMemos([{ id: Date.now(), date: toDateStr(t.year, t.month, t.day), content: tellNewContent, personIds: [...tellNewPersonIds], checks: {}, completed: false }, ...tellMemos]);
+    setTellNewContent("");
+    setTellNewPersonIds([]);
+    setView("tellMemos");
+  };
+
+  const addTellPerson = () => {
+    if (!tellNewPersonName.trim()) return;
+    setTellPeople([...tellPeople, { id: Date.now(), name: tellNewPersonName, type: tellNewPersonType }]);
+    setTellNewPersonName("");
+    setTellNewPersonType("その他");
+  };
+
+  const toggleTellCheck = (memoId, personId) => {
+    setTellMemos(prev => prev.map(m => {
+      if (m.id !== memoId) return m;
+      const cur = m.checks[personId] || { checked: false, reply: "" };
+      return { ...m, checks: { ...m.checks, [personId]: { ...cur, checked: !cur.checked } } };
+    }));
+  };
+
+  const updateTellReply = (memoId, personId, reply) => {
+    setTellMemos(prev => prev.map(m => {
+      if (m.id !== memoId) return m;
+      return { ...m, checks: { ...m.checks, [personId]: { ...m.checks[personId], reply } } };
+    }));
+  };
+
+  const completeTellMemo = (memoId) => {
+    setTellMemos(prev => prev.map(m => m.id === memoId ? { ...m, completed: true } : m));
+    setView("tellMemos");
+    setTellTab("done");
   };
 
   const psRecord = records.find((r) => r.id === psId);
@@ -1077,7 +1141,7 @@ export default function App() {
       {/* Header */}
       <div style={{ padding: "20px 20px 16px", borderBottom: `1px solid ${COLORS.border}`, display: "flex", alignItems: "center", justifyContent: "space-between", background: COLORS.surface }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          {view !== "home" && view !== "records" && view !== "tools" && view !== "medicalTab" && (
+          {view !== "home" && view !== "records" && view !== "tools" && view !== "medicalTab" && view !== "tellMemos" && (
             <button onClick={() => {
               const goHome = () => { setView("home"); setActiveTab("home"); };
               if (view === "newCoping") { setView("coping"); }
@@ -1093,6 +1157,8 @@ export default function App() {
                 if (memoView !== "list") { setMemoView("list"); setMemoEditing(false); return; }
                 setView("records"); setActiveTab("records");
               }
+              else if (view === "tellMemos") { setView("medicalTab"); setActiveTab("medical"); }
+              else if (view === "tellMemoNew" || view === "tellMemoDetail") { setView("tellMemos"); }
               else if (view === "coping" || view === "crisis") { setView("tools"); setActiveTab("tools"); }
               else if (view === "mindfulness") {
                 if (mfTimerRef) { clearInterval(mfTimerRef); setMfRunning(false); setMfRemaining(null); }
@@ -1110,6 +1176,9 @@ export default function App() {
             <div style={{ fontSize: 13, letterSpacing: 3, color: COLORS.accent, textTransform: "uppercase", fontWeight: 700 }}>Stride</div>
             {view !== "home" && (
               <div style={{ fontSize: 18, fontWeight: 700, marginTop: 2, color: COLORS.text }}>
+                {view === "tellMemos" && "伝えたいことメモ"}
+                {view === "tellMemoNew" && "新しいメモを作成"}
+                {view === "tellMemoDetail" && "メモの詳細"}
                 {view === "records" && "記録"}
                 {view === "tools" && "ツール"}
                 {view === "medicalTab" && "診察"}
@@ -1351,21 +1420,272 @@ export default function App() {
         </div>
       )}
 
-      {/* MEDICAL TAB (placeholder) */}
+      {/* MEDICAL TAB */}
       {view === "medicalTab" && (
-        <div className="page" style={{ padding: "24px 16px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: 320 }}>
-          <div style={{ fontSize: 48, marginBottom: 16 }}>🩺</div>
-          <div style={{ fontSize: 18, fontWeight: 700, color: COLORS.text, marginBottom: 8 }}>診察タブ</div>
-          <div style={{ fontSize: 13, color: COLORS.textMuted, textAlign: "center", lineHeight: 1.8, maxWidth: 260 }}>
-            このタブは今後のアップデートで追加予定です。<br />
-            診察・カウンセリング記録は「記録」タブからご利用いただけます。
+        <div className="page" style={{ padding: "24px 16px" }}>
+          <div style={{ fontSize: 13, color: COLORS.textMuted, marginBottom: 20 }}>診察・カウンセリングをサポートする機能です</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            <button onClick={() => { setTellTab("pending"); setView("tellMemos"); }}
+              style={{ width: "100%", background: `linear-gradient(135deg, #818cf815, #818cf805)`, border: `1px solid #818cf840`, borderRadius: 14, color: COLORS.text, fontSize: 14, fontWeight: 700, padding: "16px 18px", cursor: "pointer", textAlign: "left" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <span style={{ fontSize: 22 }}>💬</span>
+                <div>
+                  <div style={{ fontSize: 11, color: "#818cf8", letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 3 }}>Tell Memo</div>
+                  伝えたいことメモ
+                  <div style={{ fontSize: 12, fontWeight: 400, color: COLORS.textMuted, marginTop: 3 }}>診察前に伝えたいことをまとめ、言えたかチェックする</div>
+                </div>
+              </div>
+            </button>
+            <button onClick={() => { setMedicalView("list"); setView("medical"); setActiveTab("records"); }}
+              style={{ width: "100%", background: `linear-gradient(135deg, ${COLORS.accent}15, ${COLORS.accent}05)`, border: `1px solid ${COLORS.accent}40`, borderRadius: 14, color: COLORS.text, fontSize: 14, fontWeight: 700, padding: "16px 18px", cursor: "pointer", textAlign: "left" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <span style={{ fontSize: 22 }}>🏥</span>
+                <div>
+                  <div style={{ fontSize: 11, color: COLORS.accent, letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 3 }}>Medical</div>
+                  診察・カウンセリング記録
+                  <div style={{ fontSize: 12, fontWeight: 400, color: COLORS.textMuted, marginTop: 3 }}>通院・カウンセリングの記録を残す</div>
+                </div>
+              </div>
+            </button>
           </div>
-          <button onClick={() => { setMedicalView("list"); setView("medical"); setActiveTab("records"); }}
-            style={{ marginTop: 24, background: COLORS.accentSoft, border: `1px solid ${COLORS.accent}`, borderRadius: 12, color: COLORS.accent, fontSize: 14, fontWeight: 700, padding: "12px 24px", cursor: "pointer" }}>
-            診察・カウンセリング記録を開く →
-          </button>
         </div>
       )}
+
+      {/* TELL MEMOS LIST */}
+      {view === "tellMemos" && (
+        <div className="page" style={{ padding: "16px 16px 100px" }}>
+          {/* 3-tab switcher */}
+          <div style={{ display: "flex", gap: 6, marginBottom: 20, background: COLORS.surface, borderRadius: 12, padding: 4 }}>
+            {[{ id: "pending", label: "未完了" }, { id: "done", label: "完了済み" }, { id: "people", label: "人物管理" }].map(tab => (
+              <button key={tab.id} onClick={() => setTellTab(tab.id)}
+                style={{ flex: 1, padding: "8px 4px", borderRadius: 9, border: "none", fontSize: 13, fontWeight: 600, cursor: "pointer",
+                  background: tellTab === tab.id ? COLORS.psAccent : "transparent",
+                  color: tellTab === tab.id ? "#fff" : COLORS.textMuted }}>
+                {tab.label}
+              </button>
+            ))}
+          </div>
+
+          {/* 未完了タブ */}
+          {tellTab === "pending" && (
+            <div>
+              <button onClick={() => setView("tellMemoNew")}
+                style={{ width: "100%", padding: "13px 0", borderRadius: 12, border: "none", background: COLORS.psAccent, color: "#fff", fontSize: 14, fontWeight: 700, cursor: "pointer", marginBottom: 16 }}>
+                ＋ 新しいメモを作成
+              </button>
+              {tellMemos.filter(m => !m.completed).length === 0 ? (
+                <div style={{ textAlign: "center", color: COLORS.textMuted, fontSize: 14, marginTop: 32 }}>メモがありません</div>
+              ) : (
+                tellMemos.filter(m => !m.completed).map(m => {
+                  const people = m.personIds.map(pid => tellPeople.find(p => p.id === pid)).filter(Boolean);
+                  const checkedCount = Object.values(m.checks).filter(c => c.checked).length;
+                  return (
+                    <div key={m.id} onClick={() => { setTellDetailId(m.id); setView("tellMemoDetail"); }}
+                      style={{ background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 14, padding: "14px 16px", marginBottom: 10, cursor: "pointer" }}>
+                      <div style={{ fontSize: 12, color: COLORS.textMuted, marginBottom: 6 }}>{m.date}</div>
+                      <div style={{ fontSize: 14, color: COLORS.text, marginBottom: 10, whiteSpace: "pre-wrap", wordBreak: "break-word" }}>{m.content}</div>
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                          {people.map(p => (
+                            <span key={p.id} style={{ background: "#818cf820", border: "1px solid #818cf840", color: "#818cf8", borderRadius: 8, padding: "2px 8px", fontSize: 12 }}>
+                              {p.name}
+                            </span>
+                          ))}
+                        </div>
+                        <span style={{ fontSize: 12, color: checkedCount === m.personIds.length && m.personIds.length > 0 ? COLORS.success : COLORS.textMuted, fontWeight: 600 }}>
+                          {checkedCount}/{m.personIds.length} 済
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          )}
+
+          {/* 完了済みタブ */}
+          {tellTab === "done" && (
+            <div>
+              {tellMemos.filter(m => m.completed).length === 0 ? (
+                <div style={{ textAlign: "center", color: COLORS.textMuted, fontSize: 14, marginTop: 32 }}>完了済みのメモがありません</div>
+              ) : (
+                tellMemos.filter(m => m.completed).map(m => {
+                  const people = m.personIds.map(pid => tellPeople.find(p => p.id === pid)).filter(Boolean);
+                  return (
+                    <div key={m.id} onClick={() => { setTellDetailId(m.id); setView("tellMemoDetail"); }}
+                      style={{ background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 14, padding: "14px 16px", marginBottom: 10, cursor: "pointer", opacity: 0.7 }}>
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
+                        <div style={{ fontSize: 12, color: COLORS.textMuted }}>{m.date}</div>
+                        <span style={{ fontSize: 11, color: COLORS.success, fontWeight: 600, background: COLORS.successBg, borderRadius: 8, padding: "2px 8px" }}>✓ 完了</span>
+                      </div>
+                      <div style={{ fontSize: 14, color: COLORS.text, marginBottom: 10, whiteSpace: "pre-wrap", wordBreak: "break-word" }}>{m.content}</div>
+                      <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                        {people.map(p => (
+                          <span key={p.id} style={{ background: "#818cf820", border: "1px solid #818cf840", color: "#818cf8", borderRadius: 8, padding: "2px 8px", fontSize: 12 }}>
+                            {p.name}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          )}
+
+          {/* 人物管理タブ */}
+          {tellTab === "people" && (
+            <div>
+              <div style={{ background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 14, padding: "16px", marginBottom: 16 }}>
+                <div style={{ fontSize: 13, fontWeight: 600, color: COLORS.text, marginBottom: 12 }}>人物を追加</div>
+                <input value={tellNewPersonName} onChange={e => setTellNewPersonName(e.target.value)}
+                  placeholder="名前（例：田中先生）"
+                  style={{ width: "100%", background: COLORS.bg, border: `1px solid ${COLORS.border}`, borderRadius: 8, padding: "10px 12px", color: COLORS.text, fontSize: 14, boxSizing: "border-box", marginBottom: 10 }} />
+                <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 12 }}>
+                  {TELL_PERSON_TYPES.map(type => (
+                    <button key={type} onClick={() => setTellNewPersonType(type)}
+                      style={{ padding: "6px 12px", borderRadius: 8, border: "none", fontSize: 12, fontWeight: 600, cursor: "pointer",
+                        background: tellNewPersonType === type ? COLORS.psAccent : COLORS.bg,
+                        color: tellNewPersonType === type ? "#fff" : COLORS.textMuted }}>
+                      {type}
+                    </button>
+                  ))}
+                </div>
+                <button onClick={addTellPerson} disabled={!tellNewPersonName.trim()}
+                  style={{ width: "100%", padding: "11px 0", borderRadius: 10, border: "none", fontSize: 14, fontWeight: 700, cursor: tellNewPersonName.trim() ? "pointer" : "default",
+                    background: tellNewPersonName.trim() ? COLORS.psAccent : COLORS.border, color: "#fff" }}>
+                  追加
+                </button>
+              </div>
+              {tellPeople.length === 0 ? (
+                <div style={{ textAlign: "center", color: COLORS.textMuted, fontSize: 14, marginTop: 16 }}>登録された人物がいません</div>
+              ) : (
+                tellPeople.map(p => (
+                  <div key={p.id} style={{ background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 12, padding: "12px 16px", marginBottom: 8, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                    <div>
+                      <span style={{ fontSize: 14, fontWeight: 600, color: COLORS.text }}>{p.name}</span>
+                      <span style={{ fontSize: 12, color: COLORS.textMuted, marginLeft: 8 }}>{p.type}</span>
+                    </div>
+                    <button onClick={() => setTellPeople(prev => prev.filter(x => x.id !== p.id))}
+                      style={{ background: "none", border: "none", color: COLORS.danger, fontSize: 18, cursor: "pointer", padding: "0 4px" }}>
+                      ×
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* TELL MEMO NEW */}
+      {view === "tellMemoNew" && (
+        <div className="page" style={{ padding: "16px 16px 100px" }}>
+          <div style={{ fontSize: 13, color: COLORS.textMuted, marginBottom: 16 }}>診察やカウンセリングで伝えたいことをメモしておきましょう</div>
+          <textarea value={tellNewContent} onChange={e => setTellNewContent(e.target.value)}
+            placeholder="伝えたいことを書いてください（例：最近眠れていない、薬の副作用が気になる）"
+            rows={6}
+            style={{ width: "100%", background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 12, padding: "14px", color: COLORS.text, fontSize: 14, boxSizing: "border-box", resize: "vertical", marginBottom: 20, lineHeight: 1.6 }} />
+          <div style={{ fontSize: 13, fontWeight: 600, color: COLORS.text, marginBottom: 10 }}>誰に伝える？（複数選択可）</div>
+          {tellPeople.length === 0 ? (
+            <div style={{ background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 12, padding: "16px", textAlign: "center", marginBottom: 16 }}>
+              <div style={{ color: COLORS.textMuted, fontSize: 13, marginBottom: 10 }}>まだ人物が登録されていません</div>
+              <button onClick={() => { setView("tellMemos"); setTellTab("people"); }}
+                style={{ padding: "8px 16px", borderRadius: 8, border: "none", background: COLORS.psAccent, color: "#fff", fontSize: 13, cursor: "pointer" }}>
+                人物を追加する
+              </button>
+            </div>
+          ) : (
+            <div style={{ marginBottom: 20 }}>
+              {tellPeople.map(p => {
+                const selected = tellNewPersonIds.includes(p.id);
+                return (
+                  <div key={p.id} onClick={() => setTellNewPersonIds(prev => selected ? prev.filter(id => id !== p.id) : [...prev, p.id])}
+                    style={{ display: "flex", alignItems: "center", gap: 12, background: selected ? "#818cf815" : COLORS.surface,
+                      border: `1px solid ${selected ? "#818cf860" : COLORS.border}`, borderRadius: 12, padding: "12px 16px", marginBottom: 8, cursor: "pointer" }}>
+                    <div style={{ width: 20, height: 20, borderRadius: 6, border: `2px solid ${selected ? COLORS.psAccent : COLORS.textMuted}`,
+                      background: selected ? COLORS.psAccent : "transparent", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                      {selected && <span style={{ color: "#fff", fontSize: 13, lineHeight: 1 }}>✓</span>}
+                    </div>
+                    <div>
+                      <div style={{ fontSize: 14, fontWeight: 600, color: COLORS.text }}>{p.name}</div>
+                      <div style={{ fontSize: 12, color: COLORS.textMuted }}>{p.type}</div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+          <div style={{ display: "flex", gap: 10 }}>
+            <button onClick={() => setView("tellMemos")}
+              style={{ flex: 1, padding: "13px 0", borderRadius: 12, border: `1px solid ${COLORS.border}`, background: "none", color: COLORS.textMuted, fontSize: 14, fontWeight: 600, cursor: "pointer" }}>
+              キャンセル
+            </button>
+            <button onClick={saveTellMemo} disabled={!tellNewContent.trim() || tellNewPersonIds.length === 0}
+              style={{ flex: 2, padding: "13px 0", borderRadius: 12, border: "none", fontSize: 14, fontWeight: 700, cursor: tellNewContent.trim() && tellNewPersonIds.length > 0 ? "pointer" : "default",
+                background: tellNewContent.trim() && tellNewPersonIds.length > 0 ? COLORS.psAccent : COLORS.border, color: "#fff" }}>
+              メモを保存
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* TELL MEMO DETAIL */}
+      {view === "tellMemoDetail" && (() => {
+        const memo = tellMemos.find(m => m.id === tellDetailId);
+        if (!memo) return <div className="page" style={{ padding: 16, color: COLORS.textMuted }}>メモが見つかりません</div>;
+        const people = memo.personIds.map(pid => tellPeople.find(p => p.id === pid)).filter(Boolean);
+        const allChecked = people.length > 0 && people.every(p => memo.checks[p.id]?.checked);
+        return (
+          <div className="page" style={{ padding: "16px 16px 100px" }}>
+            <div style={{ fontSize: 12, color: COLORS.textMuted, marginBottom: 8 }}>{memo.date}</div>
+            <div style={{ background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 14, padding: "16px", marginBottom: 20 }}>
+              <div style={{ fontSize: 14, color: COLORS.text, whiteSpace: "pre-wrap", wordBreak: "break-word", lineHeight: 1.7 }}>{memo.content}</div>
+            </div>
+            <div style={{ fontSize: 13, fontWeight: 600, color: COLORS.text, marginBottom: 12 }}>伝えた記録</div>
+            {people.map(p => {
+              const check = memo.checks[p.id] || { checked: false, reply: "" };
+              return (
+                <div key={p.id} style={{ background: COLORS.surface, border: `1px solid ${check.checked ? "#818cf860" : COLORS.border}`, borderRadius: 14, padding: "14px 16px", marginBottom: 10 }}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: check.checked ? 12 : 0 }}>
+                    <div>
+                      <span style={{ fontSize: 14, fontWeight: 600, color: COLORS.text }}>{p.name}</span>
+                      <span style={{ fontSize: 12, color: COLORS.textMuted, marginLeft: 8 }}>{p.type}</span>
+                    </div>
+                    <button onClick={() => toggleTellCheck(memo.id, p.id)}
+                      style={{ padding: "7px 14px", borderRadius: 9, border: "none", fontSize: 13, fontWeight: 600, cursor: "pointer",
+                        background: check.checked ? "#818cf820" : COLORS.psAccent, color: check.checked ? "#818cf8" : "#fff" }}>
+                      {check.checked ? "✓ 伝えた" : "伝えた"}
+                    </button>
+                  </div>
+                  {check.checked && (
+                    <div>
+                      <div style={{ fontSize: 12, color: COLORS.textMuted, marginBottom: 6 }}>言われたこと・返答メモ（任意）</div>
+                      <textarea value={check.reply || ""} onChange={e => updateTellReply(memo.id, p.id, e.target.value)}
+                        placeholder="相手から言われたことや返答をメモできます"
+                        rows={3}
+                        style={{ width: "100%", background: COLORS.bg, border: `1px solid ${COLORS.border}`, borderRadius: 10, padding: "10px 12px", color: COLORS.text, fontSize: 13, boxSizing: "border-box", resize: "vertical", lineHeight: 1.6 }} />
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+            {!memo.completed && allChecked && (
+              <button onClick={() => completeTellMemo(memo.id)}
+                style={{ width: "100%", padding: "14px 0", borderRadius: 12, border: "none", background: COLORS.success, color: COLORS.bg, fontSize: 14, fontWeight: 700, cursor: "pointer", marginTop: 8, marginBottom: 10 }}>
+                ✓ このメモを完了にする
+              </button>
+            )}
+            {memo.completed && (
+              <div style={{ textAlign: "center", color: COLORS.success, fontSize: 13, fontWeight: 600, marginTop: 8, marginBottom: 10 }}>✓ 完了済み</div>
+            )}
+            <button onClick={() => { setTellMemos(prev => prev.filter(m => m.id !== memo.id)); setView("tellMemos"); }}
+              style={{ width: "100%", padding: "12px 0", borderRadius: 12, border: `1px solid ${COLORS.danger}40`, background: "none", color: COLORS.danger, fontSize: 13, fontWeight: 600, cursor: "pointer", marginTop: 4 }}>
+              このメモを削除
+            </button>
+          </div>
+        );
+      })()}
 
       {/* ACHIEVEMENT */}
       {view === "achievement" && (() => {

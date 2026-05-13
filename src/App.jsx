@@ -386,9 +386,9 @@ const inp = {
   boxSizing: "border-box",
 };
 
-const BottomNav = ({ onHome }) => (
+const BottomNav = ({ onBack, onHome }) => (
   <div className="no-print" style={{ display: "flex", gap: 10, marginTop: 32, paddingTop: 16, borderTop: `1px solid #2a2d3e` }}>
-    <button onClick={onHome} style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, background: "#1a1d27", border: "1px solid #2a2d3e", borderRadius: 12, color: "#6b7280", fontSize: 14, padding: "12px", cursor: "pointer" }}>
+    <button onClick={onBack || onHome} style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, background: "#1a1d27", border: "1px solid #2a2d3e", borderRadius: 12, color: "#6b7280", fontSize: 14, padding: "12px", cursor: "pointer" }}>
       <IconArrowLeft size={16} />戻る
     </button>
     <button onClick={onHome} style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, background: "#1a1d27", border: "1px solid #2a2d3e", borderRadius: 12, color: "#6b7280", fontSize: 14, padding: "12px", cursor: "pointer" }}>
@@ -680,7 +680,7 @@ const saveCopings = (copings) => {
   try { localStorage.setItem(COPING_KEY, JSON.stringify(copings)); } catch (e) {}
 };
 
-function SortablePersonItem({ person, onDelete }) {
+function SortablePersonItem({ person, onDelete, onEdit }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: person.id });
   return (
     <div ref={setNodeRef}
@@ -695,10 +695,16 @@ function SortablePersonItem({ person, onDelete }) {
           <span style={{ fontSize: 12, color: COLORS.textMuted, marginLeft: 8 }}>{person.type}</span>
         </div>
       </div>
-      <button onClick={() => onDelete(person.id)}
-        style={{ background: "none", border: "none", color: COLORS.danger, fontSize: 18, cursor: "pointer", padding: "0 4px" }}>
-        ×
-      </button>
+      <div style={{ display: "flex", gap: 6 }}>
+        <button onClick={() => onEdit(person)}
+          style={{ background: "none", border: `1px solid ${COLORS.border}`, borderRadius: 8, color: COLORS.textMuted, fontSize: 12, cursor: "pointer", padding: "4px 10px" }}>
+          編集
+        </button>
+        <button onClick={() => onDelete(person.id)}
+          style={{ background: "none", border: "none", color: COLORS.danger, fontSize: 18, cursor: "pointer", padding: "0 4px" }}>
+          ×
+        </button>
+      </div>
     </div>
   );
 }
@@ -776,9 +782,15 @@ export default function App() {
   const [tellNewContent, setTellNewContent] = useState("");
   const [tellNewPersonIds, setTellNewPersonIds] = useState([]);
   const [tellNewPersonName, setTellNewPersonName] = useState("");
-  const [tellNewPersonType, setTellNewPersonType] = useState("その他");
+  const [tellNewPersonType, setTellNewPersonType] = useState("主治医");
   const [tellMemoDeleteId, setTellMemoDeleteId] = useState(null);
   const [tellPersonDeleteId, setTellPersonDeleteId] = useState(null);
+  const [tellEditId, setTellEditId] = useState(null);
+  const [tellEditContent, setTellEditContent] = useState("");
+  const [tellEditPersonIds, setTellEditPersonIds] = useState([]);
+  const [tellPersonEditId, setTellPersonEditId] = useState(null);
+  const [tellPersonEditName, setTellPersonEditName] = useState("");
+  const [tellPersonEditType, setTellPersonEditType] = useState("主治医");
 
   const [bridgeSettings, setBridgeSettings] = useState(loadBridgeSettings);
   const [bridgeMemos, setBridgeMemos] = useState(loadBridgeMemos);
@@ -987,14 +999,16 @@ export default function App() {
     if (!tellNewPersonName.trim()) return;
     setTellPeople([...tellPeople, { id: Date.now(), name: tellNewPersonName, type: tellNewPersonType }]);
     setTellNewPersonName("");
-    setTellNewPersonType("その他");
+    setTellNewPersonType("主治医");
   };
 
   const toggleTellCheck = (memoId, personId) => {
     setTellMemos(prev => prev.map(m => {
       if (m.id !== memoId) return m;
       const cur = m.checks[personId] || { checked: false, reply: "" };
-      return { ...m, checks: { ...m.checks, [personId]: { ...cur, checked: !cur.checked } } };
+      const newChecks = { ...m.checks, [personId]: { ...cur, checked: !cur.checked } };
+      const allChecked = m.personIds.length > 0 && m.personIds.every(pid => newChecks[pid]?.checked);
+      return { ...m, checks: newChecks, completed: m.completed || allChecked };
     }));
   };
 
@@ -1195,7 +1209,7 @@ export default function App() {
       {/* Header */}
       <div style={{ padding: "20px 20px 16px", borderBottom: `1px solid ${COLORS.border}`, display: "flex", alignItems: "center", justifyContent: "space-between", background: COLORS.surface }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          {view !== "home" && view !== "records" && view !== "tools" && view !== "medicalTab" && view !== "tellMemos" && (
+          {view !== "home" && view !== "records" && view !== "tools" && view !== "medicalTab" && (
             <button onClick={() => {
               const goHome = () => { setView("home"); setActiveTab("home"); };
               if (view === "newCoping") { setView("coping"); }
@@ -1212,7 +1226,7 @@ export default function App() {
                 setView("records"); setActiveTab("records");
               }
               else if (view === "tellMemos") { setView("medicalTab"); setActiveTab("medical"); }
-              else if (view === "tellMemoNew" || view === "tellMemoDetail") { setView("tellMemos"); }
+              else if (view === "tellMemoNew" || view === "tellMemoDetail" || view === "tellMemoEdit") { setView("tellMemos"); }
               else if (view === "coping" || view === "crisis") { setView("tools"); setActiveTab("tools"); }
               else if (view === "mindfulness") {
                 if (mfTimerRef) { clearInterval(mfTimerRef); setMfRunning(false); setMfRemaining(null); }
@@ -1252,6 +1266,7 @@ export default function App() {
                 {view === "bridgePerson" && "Bridge Session"}
                 {view === "bridge" && "Bridge Session"}
                 {view === "bridgeSettings" && "表示項目の設定"}
+                {view === "tellMemoEdit" && "メモを編集"}
                 {view === "memo" && (memoView === "list" ? "メモ" : memoView === "new" ? "新しいメモ" : memoEditing ? "編集" : "メモの詳細")}
                 {view === "approach" && "アプローチを選ぶ"}
                 {view === "cbtSelect" && "コラム法を選ぶ"}
@@ -1576,12 +1591,6 @@ export default function App() {
           if (personPendingMemos.length === 0) {
             setBridgeMemos(prev => [{ id: Date.now(), date: todayDs, content: bridgeMemoInput.trim() }, ...prev]);
             setBridgeMemoInput("");
-          } else if (personPendingMemos.length === 1) {
-            updateTellReply(personPendingMemos[0].id, bridgePersonId, bridgeMemoInput.trim());
-            if (!tellMemos.find(m => m.id === personPendingMemos[0].id)?.checks[bridgePersonId]?.checked) {
-              toggleTellCheck(personPendingMemos[0].id, bridgePersonId);
-            }
-            setBridgeMemoInput("");
           } else {
             setBridgeMemoSelectDialog({ content: bridgeMemoInput.trim(), memos: personPendingMemos });
           }
@@ -1607,9 +1616,15 @@ export default function App() {
                     const check = m.checks[bridgePersonId] || { checked: false };
                     return (
                       <div key={m.id} style={{ background: COLORS.surface, border: `1px solid ${check.checked ? "#818cf860" : "#818cf840"}`, borderRadius: 12, padding: "12px 14px", marginBottom: 8, opacity: check.checked ? 0.65 : 1 }}>
-                        <div style={{ fontSize: 12, color: COLORS.textMuted, marginBottom: 4 }}>{m.date}</div>
+                        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 4 }}>
+                          <div style={{ fontSize: 12, color: COLORS.textMuted }}>{m.date}</div>
+                          <button onClick={() => toggleTellCheck(m.id, bridgePersonId)}
+                            style={{ padding: "4px 10px", borderRadius: 8, border: "none", fontSize: 12, fontWeight: 600, cursor: "pointer", flexShrink: 0, marginLeft: 8,
+                              background: check.checked ? "#818cf820" : COLORS.psAccent, color: check.checked ? "#818cf8" : "#fff" }}>
+                            {check.checked ? "✓ 伝えた" : "伝えた"}
+                          </button>
+                        </div>
                         <div style={{ fontSize: 14, color: COLORS.text, lineHeight: 1.6, whiteSpace: "pre-wrap", wordBreak: "break-word" }}>{m.content}</div>
-                        {check.checked && <div style={{ fontSize: 11, color: "#818cf8", marginTop: 6, fontWeight: 600 }}>✓ 伝えた</div>}
                       </div>
                     );
                   })
@@ -1639,20 +1654,28 @@ export default function App() {
               </div>
             )}
 
-            {/* 睡眠記録（14日） */}
+            {/* 睡眠記録（14日）バーグラフ */}
             {bridgeSettings.showSleep && (
               <div style={{ marginBottom: 20 }}>
                 <div style={{ fontSize: 11, fontWeight: 700, color: COLORS.accent, letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 10 }}>睡眠（直近2週間）</div>
-                <div style={{ background: COLORS.surface, borderRadius: 12, border: `1px solid ${COLORS.border}`, overflow: "hidden" }}>
+                <div style={{ background: COLORS.surface, borderRadius: 12, padding: "12px 14px", border: `1px solid ${COLORS.border}` }}>
                   {last14.filter(d => d.sleep).length === 0 ? (
-                    <div style={{ padding: "12px 14px", fontSize: 13, color: COLORS.textMuted }}>記録なし</div>
+                    <div style={{ fontSize: 13, color: COLORS.textMuted }}>記録なし</div>
                   ) : (
-                    last14.filter(d => d.sleep).map((d, i, arr) => (
-                      <div key={d.ds} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", borderBottom: i < arr.length - 1 ? `1px solid ${COLORS.border}` : "none" }}>
-                        <div style={{ fontSize: 12, color: COLORS.textMuted }}>{d.label}</div>
-                        <div style={{ fontSize: 13, color: COLORS.text, fontWeight: 600 }}>{d.sleep}</div>
-                      </div>
-                    ))
+                    <div style={{ display: "flex", gap: 3, alignItems: "flex-end", height: 60 }}>
+                      {last14.map((d, i) => {
+                        const lv = d.sleep === "4時間未満" ? 1 : d.sleep === "4〜6時間" ? 2 : d.sleep === "6〜8時間" ? 3 : d.sleep === "8時間以上" ? 4 : null;
+                        const barH = lv !== null ? Math.max(4, (lv / 4) * 44) : 4;
+                        const color = lv === 1 ? COLORS.danger : lv === 2 ? "#e0a855" : COLORS.accent;
+                        return (
+                          <div key={i} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
+                            {lv !== null && <div style={{ fontSize: 8, color, fontWeight: 700 }}>{lv}</div>}
+                            <div style={{ width: "100%", height: barH, borderRadius: 2, background: color, opacity: lv !== null ? 1 : 0.2 }} />
+                            <div style={{ fontSize: 7, color: COLORS.textMuted, whiteSpace: "nowrap" }}>{d.label}</div>
+                          </div>
+                        );
+                      })}
+                    </div>
                   )}
                 </div>
               </div>
@@ -1704,6 +1727,8 @@ export default function App() {
                 ))}
               </div>
             )}
+
+            <BottomNav onBack={() => { setBridgePersonId(null); setView("medicalTab"); setActiveTab("medical"); }} onHome={() => { setView("home"); setActiveTab("home"); }} />
 
             {/* 固定メモ入力パネル */}
             <div style={{ position: "fixed", bottom: "calc(56px + env(safe-area-inset-bottom))", left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 480, background: COLORS.surface, borderTop: `1px solid ${COLORS.border}`, padding: "12px 16px", zIndex: 150, boxSizing: "border-box" }}>
@@ -1812,10 +1837,16 @@ export default function App() {
                   const people = m.personIds.map(pid => tellPeople.find(p => p.id === pid)).filter(Boolean);
                   const checkedCount = Object.values(m.checks).filter(c => c.checked).length;
                   return (
-                    <div key={m.id} onClick={() => { setTellDetailId(m.id); setView("tellMemoDetail"); }}
-                      style={{ background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 14, padding: "14px 16px", marginBottom: 10, cursor: "pointer" }}>
-                      <div style={{ fontSize: 12, color: COLORS.textMuted, marginBottom: 6 }}>{m.date}</div>
-                      <div style={{ fontSize: 14, color: COLORS.text, marginBottom: 10, whiteSpace: "pre-wrap", wordBreak: "break-word" }}>{m.content}</div>
+                    <div key={m.id} style={{ background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 14, padding: "14px 16px", marginBottom: 10 }}>
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
+                        <div style={{ fontSize: 12, color: COLORS.textMuted }}>{m.date}</div>
+                        <button onClick={(e) => { e.stopPropagation(); setTellEditId(m.id); setTellEditContent(m.content); setTellEditPersonIds([...m.personIds]); setView("tellMemoEdit"); }}
+                          style={{ padding: "4px 10px", borderRadius: 8, border: `1px solid ${COLORS.border}`, background: "none", color: COLORS.textMuted, fontSize: 12, cursor: "pointer" }}>
+                          編集
+                        </button>
+                      </div>
+                      <div onClick={() => { setTellDetailId(m.id); setView("tellMemoDetail"); }}
+                        style={{ fontSize: 14, color: COLORS.text, marginBottom: 10, whiteSpace: "pre-wrap", wordBreak: "break-word", cursor: "pointer" }}>{m.content}</div>
                       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                         <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                           {people.map(p => (
@@ -1904,13 +1935,15 @@ export default function App() {
                   }}>
                   <SortableContext items={tellPeople.map(p => p.id)} strategy={verticalListSortingStrategy}>
                     {tellPeople.map(p => (
-                      <SortablePersonItem key={p.id} person={p} onDelete={(id) => setTellPersonDeleteId(id)} />
+                      <SortablePersonItem key={p.id} person={p} onDelete={(id) => setTellPersonDeleteId(id)}
+                        onEdit={(person) => { setTellPersonEditId(person.id); setTellPersonEditName(person.name); setTellPersonEditType(person.type); }} />
                     ))}
                   </SortableContext>
                 </DndContext>
               )}
             </div>
           )}
+          <BottomNav onBack={() => { setView("medicalTab"); setActiveTab("medical"); }} onHome={() => { setView("home"); setActiveTab("home"); }} />
         </div>
       )}
 
@@ -2025,6 +2058,55 @@ export default function App() {
               style={{ width: "100%", padding: "12px 0", borderRadius: 12, border: `1px solid ${COLORS.danger}40`, background: "none", color: COLORS.danger, fontSize: 13, fontWeight: 600, cursor: "pointer", marginTop: 4 }}>
               このメモを削除
             </button>
+          </div>
+        );
+      })()}
+
+      {/* TELL MEMO EDIT */}
+      {view === "tellMemoEdit" && (() => {
+        const memo = tellMemos.find(m => m.id === tellEditId);
+        if (!memo) return <div className="page" style={{ padding: 16, color: COLORS.textMuted }}>メモが見つかりません</div>;
+        const saveEdit = () => {
+          if (!tellEditContent.trim() || tellEditPersonIds.length === 0) return;
+          setTellMemos(prev => prev.map(m => m.id === tellEditId ? { ...m, content: tellEditContent.trim(), personIds: tellEditPersonIds } : m));
+          setView("tellMemos");
+        };
+        return (
+          <div className="page" style={{ padding: "16px 16px 100px" }}>
+            <textarea value={tellEditContent} onChange={e => setTellEditContent(e.target.value)}
+              rows={6}
+              style={{ width: "100%", background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 12, padding: "14px", color: COLORS.text, fontSize: 14, boxSizing: "border-box", resize: "vertical", marginBottom: 20, lineHeight: 1.6 }} />
+            <div style={{ fontSize: 13, fontWeight: 600, color: COLORS.text, marginBottom: 10 }}>誰に伝える？</div>
+            <div style={{ marginBottom: 20 }}>
+              {tellPeople.map(p => {
+                const selected = tellEditPersonIds.includes(p.id);
+                return (
+                  <div key={p.id} onClick={() => setTellEditPersonIds(prev => selected ? prev.filter(id => id !== p.id) : [...prev, p.id])}
+                    style={{ display: "flex", alignItems: "center", gap: 12, background: selected ? "#818cf815" : COLORS.surface,
+                      border: `1px solid ${selected ? "#818cf860" : COLORS.border}`, borderRadius: 12, padding: "12px 16px", marginBottom: 8, cursor: "pointer" }}>
+                    <div style={{ width: 20, height: 20, borderRadius: 6, border: `2px solid ${selected ? COLORS.psAccent : COLORS.textMuted}`,
+                      background: selected ? COLORS.psAccent : "transparent", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                      {selected && <span style={{ color: "#fff", fontSize: 13, lineHeight: 1 }}>✓</span>}
+                    </div>
+                    <div>
+                      <div style={{ fontSize: 14, fontWeight: 600, color: COLORS.text }}>{p.name}</div>
+                      <div style={{ fontSize: 12, color: COLORS.textMuted }}>{p.type}</div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            <div style={{ display: "flex", gap: 10 }}>
+              <button onClick={() => setView("tellMemos")}
+                style={{ flex: 1, padding: "13px 0", borderRadius: 12, border: `1px solid ${COLORS.border}`, background: "none", color: COLORS.textMuted, fontSize: 14, fontWeight: 600, cursor: "pointer" }}>
+                キャンセル
+              </button>
+              <button onClick={saveEdit} disabled={!tellEditContent.trim() || tellEditPersonIds.length === 0}
+                style={{ flex: 2, padding: "13px 0", borderRadius: 12, border: "none", fontSize: 14, fontWeight: 700, cursor: tellEditContent.trim() && tellEditPersonIds.length > 0 ? "pointer" : "default",
+                  background: tellEditContent.trim() && tellEditPersonIds.length > 0 ? COLORS.psAccent : COLORS.border, color: "#fff" }}>
+                保存する
+              </button>
+            </div>
           </div>
         );
       })()}
@@ -2456,6 +2538,9 @@ export default function App() {
                 </div>
               </>
             )}
+            <div style={{ padding: "0 16px" }}>
+              <BottomNav onBack={() => { setView("medicalTab"); setActiveTab("medical"); }} onHome={() => { setView("home"); setActiveTab("home"); }} />
+            </div>
           </div>
         );
       })()}
@@ -3828,6 +3913,42 @@ export default function App() {
               <button onClick={() => { setTellPeople(prev => prev.filter(p => p.id !== tellPersonDeleteId)); setTellPersonDeleteId(null); }}
                 style={{ flex: 1, background: COLORS.danger, border: "none", borderRadius: 10, color: "#fff", fontSize: 14, fontWeight: 700, padding: 12, cursor: "pointer" }}>
                 削除する
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 人物編集ダイアログ */}
+      {tellPersonEditId && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", padding: 24, zIndex: 350 }}>
+          <div style={{ background: COLORS.surface, borderRadius: 16, padding: 24, width: "100%", maxWidth: 320 }}>
+            <div style={{ fontSize: 16, fontWeight: 700, color: COLORS.text, marginBottom: 16 }}>人物を編集</div>
+            <input value={tellPersonEditName} onChange={e => setTellPersonEditName(e.target.value)}
+              placeholder="名前"
+              style={{ width: "100%", background: COLORS.bg, border: `1px solid ${COLORS.border}`, borderRadius: 8, padding: "10px 12px", color: COLORS.text, fontSize: 14, boxSizing: "border-box", marginBottom: 12 }} />
+            <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 20 }}>
+              {TELL_PERSON_TYPES.map(type => (
+                <button key={type} onClick={() => setTellPersonEditType(type)}
+                  style={{ padding: "6px 12px", borderRadius: 8, border: "none", fontSize: 12, fontWeight: 600, cursor: "pointer",
+                    background: tellPersonEditType === type ? COLORS.psAccent : COLORS.bg,
+                    color: tellPersonEditType === type ? "#fff" : COLORS.textMuted }}>
+                  {type}
+                </button>
+              ))}
+            </div>
+            <div style={{ display: "flex", gap: 10 }}>
+              <button onClick={() => setTellPersonEditId(null)}
+                style={{ flex: 1, background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 10, color: COLORS.textMuted, fontSize: 14, padding: 12, cursor: "pointer" }}>
+                キャンセル
+              </button>
+              <button onClick={() => {
+                if (!tellPersonEditName.trim()) return;
+                setTellPeople(prev => prev.map(p => p.id === tellPersonEditId ? { ...p, name: tellPersonEditName.trim(), type: tellPersonEditType } : p));
+                setTellPersonEditId(null);
+              }} disabled={!tellPersonEditName.trim()}
+                style={{ flex: 1, background: tellPersonEditName.trim() ? COLORS.psAccent : COLORS.border, border: "none", borderRadius: 10, color: "#fff", fontSize: 14, fontWeight: 700, padding: 12, cursor: tellPersonEditName.trim() ? "pointer" : "default" }}>
+                保存する
               </button>
             </div>
           </div>

@@ -601,12 +601,24 @@ const importData = (file, onDone) => {
   reader.onload = (e) => {
     try {
       const data = JSON.parse(e.target.result);
+      if (typeof data !== "object" || data === null || Array.isArray(data)) {
+        onDone("error");
+        return;
+      }
+      let imported = 0;
       ALL_STORAGE_KEYS.forEach((key) => {
-        if (data[key] !== undefined && data[key] !== null) {
-          localStorage.setItem(key, JSON.stringify(data[key]));
+        if (data[key] === undefined || data[key] === null) return;
+        try {
+          // 往復シリアライズで構造を検証してから保存
+          const serialized = JSON.stringify(data[key]);
+          JSON.parse(serialized);
+          localStorage.setItem(key, serialized);
+          imported++;
+        } catch (_) {
+          // このキーはスキップ
         }
       });
-      onDone("ok");
+      onDone(imported > 0 ? "ok" : "error");
     } catch (err) {
       onDone("error");
     }

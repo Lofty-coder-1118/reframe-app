@@ -1658,14 +1658,17 @@ export default function App() {
             {bridgeSettings.showMoodGraph && (
               <div style={{ marginBottom: 20 }}>
                 <div style={{ fontSize: 11, fontWeight: 700, color: COLORS.accent, letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 10 }}>気分（直近2週間）</div>
-                <div style={{ background: COLORS.surface, borderRadius: 12, padding: "18px 14px 12px", border: `1px solid ${COLORS.border}` }}>
-                  <div style={{ display: "flex", gap: 3, alignItems: "flex-end", height: 60 }}>
+                <div style={{ background: COLORS.surface, borderRadius: 12, padding: "12px 14px", border: `1px solid ${COLORS.border}` }}>
+                  <div style={{ display: "flex", gap: 3, height: 69 }}>
                     {last14.map((d, i) => {
                       const barH = d.mood !== null ? Math.max(4, (d.mood / 10) * 44) : 4;
                       const color = d.mood !== null ? moodColor(d.mood) : COLORS.border;
                       return (
                         <div key={i} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
-                          {d.mood !== null && <div style={{ fontSize: 8, color, fontWeight: 700 }}>{d.mood}</div>}
+                          <div style={{ height: 10, display: "flex", alignItems: "center" }}>
+                            {d.mood !== null && <div style={{ fontSize: 8, color, fontWeight: 700 }}>{d.mood}</div>}
+                          </div>
+                          <div style={{ flex: 1 }} />
                           <div style={{ width: "100%", height: barH, borderRadius: 2, background: color, opacity: d.mood !== null ? 1 : 0.2 }} />
                           <div style={{ fontSize: 7, color: COLORS.textMuted, whiteSpace: "nowrap" }}>{d.label}</div>
                         </div>
@@ -1680,18 +1683,21 @@ export default function App() {
             {bridgeSettings.showSleep && (
               <div style={{ marginBottom: 20 }}>
                 <div style={{ fontSize: 11, fontWeight: 700, color: COLORS.accent, letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 10 }}>睡眠（直近2週間）</div>
-                <div style={{ background: COLORS.surface, borderRadius: 12, padding: "18px 14px 12px", border: `1px solid ${COLORS.border}` }}>
+                <div style={{ background: COLORS.surface, borderRadius: 12, padding: "12px 14px", border: `1px solid ${COLORS.border}` }}>
                   {last14.filter(d => d.sleep).length === 0 ? (
                     <div style={{ fontSize: 13, color: COLORS.textMuted }}>記録なし</div>
                   ) : (
-                    <div style={{ display: "flex", gap: 3, alignItems: "flex-end", height: 60 }}>
+                    <div style={{ display: "flex", gap: 3, height: 69 }}>
                       {last14.map((d, i) => {
                         const lv = d.sleep === "4時間未満" ? 1 : d.sleep === "4〜6時間" ? 2 : d.sleep === "6〜8時間" ? 3 : d.sleep === "8時間以上" ? 4 : null;
                         const barH = lv !== null ? Math.max(4, (lv / 4) * 44) : 4;
                         const color = lv === 1 ? COLORS.danger : lv === 2 ? "#e0a855" : COLORS.accent;
                         return (
                           <div key={i} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
-                            {lv !== null && <div style={{ fontSize: 8, color, fontWeight: 700 }}>{lv}</div>}
+                            <div style={{ height: 10, display: "flex", alignItems: "center" }}>
+                              {lv !== null && <div style={{ fontSize: 8, color, fontWeight: 700 }}>{lv}</div>}
+                            </div>
+                            <div style={{ flex: 1 }} />
                             <div style={{ width: "100%", height: barH, borderRadius: 2, background: color, opacity: lv !== null ? 1 : 0.2 }} />
                             <div style={{ fontSize: 7, color: COLORS.textMuted, whiteSpace: "nowrap" }}>{d.label}</div>
                           </div>

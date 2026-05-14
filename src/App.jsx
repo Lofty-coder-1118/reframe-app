@@ -735,6 +735,9 @@ export default function App() {
   const [psDraft, setPsDraft] = useState({});
   const [psSolutionItems, setPsSolutionItems] = useState([{ id: Date.now(), text: "" }]);
   const [psSolutionInput, setPsSolutionInput] = useState("");
+  const [psBreakdownItems, setPsBreakdownItems] = useState([{ id: Date.now(), text: "" }]);
+  const [psReviewId, setPsReviewId] = useState(null);
+  const [psReviewDraft, setPsReviewDraft] = useState({ result: "", insight: "" });
 
   const [detailId, setDetailId] = useState(null);
   const [deleteTargetId, setDeleteTargetId] = useState(null);
@@ -767,6 +770,7 @@ export default function App() {
   const [graphPeriod, setGraphPeriod] = useState(14); // 14 | 30
   const [graphMetric, setGraphMetric] = useState("mood"); // "mood" | "condition" | "sleep"
   const [historyTab, setHistoryTab] = useState("graph"); // "graph" | "report" | "list"
+  const [reportWeekOffset, setReportWeekOffset] = useState(0);
 
   const [achievements, setAchievements] = useState(loadAchievements);
   const [achievementText, setAchievementText] = useState("");
@@ -952,19 +956,34 @@ export default function App() {
   const startPS = (id) => {
     const rec = records.find((r) => r.id === id);
     setPsId(id);
-    setPsDraft(rec.ps || {});
+    const ps = rec.ps || {};
+    setPsDraft(ps);
+    const breakdownLines = (ps.breakdown || "").split("\n").filter(l => l.trim());
+    setPsBreakdownItems(breakdownLines.length > 0 ? breakdownLines.map((t, i) => ({ id: i, text: t })) : [{ id: Date.now(), text: "" }]);
     setPsStep(0);
     setShowHint(false);
     setView("ps");
   };
 
   const finishPS = () => {
-    setRecords(records.map((r) => r.id === psId ? { ...r, completed: true, ps: psDraft } : r));
+    setRecords(records.map((r) => r.id === psId ? { ...r, ps: { ...psDraft, status: "planned" } } : r));
     setView("list");
   };
 
   const savePSDraft = () => {
     setRecords(records.map((r) => r.id === psId ? { ...r, completed: false, ps: psDraft } : r));
+    setView("list");
+  };
+
+  const startPsReview = (id) => {
+    const rec = records.find((r) => r.id === id);
+    setPsReviewId(id);
+    setPsReviewDraft({ result: rec.ps?.review?.result || "", insight: rec.ps?.review?.insight || "" });
+    setView("psReview");
+  };
+
+  const savePsReview = () => {
+    setRecords(prev => prev.map(r => r.id === psReviewId ? { ...r, ps: { ...r.ps, status: "done", review: psReviewDraft } } : r));
     setView("list");
   };
 
@@ -2800,13 +2819,20 @@ export default function App() {
                     style={{ flexShrink: 0, marginTop: 2, background: "none", border: "none", color: COLORS.textMuted, cursor: "pointer", fontSize: 18, padding: "0 2px", lineHeight: 1, opacity: 0.5 }}
                   >×</button>
                 </div>
-                {!rec.completed && (
+                {rec.ps?.status === "planned" ? (
+                  <button onClick={() => startPsReview(rec.id)}
+                    style={{ marginTop: 10, width: "100%", background: "#818cf810", border: `1px solid #818cf840`, borderRadius: 8, color: "#818cf8", fontSize: 13, fontWeight: 700, padding: "10px", cursor: "pointer" }}>
+                    🕐 振り返りを記録する
+                  </button>
+                ) : rec.ps?.status === "done" ? (
+                  <div style={{ marginTop: 8, fontSize: 12, color: COLORS.accent, display: "flex", alignItems: "center", gap: 4 }}>✓ 振り返り完了</div>
+                ) : !rec.completed ? (
                   <button onClick={() => startApproach(rec.id)} style={{ marginTop: 12, width: "100%", background: COLORS.accentSoft, border: "none", borderRadius: 8, color: COLORS.accentText, fontSize: 13, fontWeight: 700, padding: "10px", cursor: "pointer" }}>
                     {(rec.cbt && Object.keys(rec.cbt).length > 0) || (rec.ps && Object.keys(rec.ps).length > 0)
                       ? "続きから →"
                       : "アプローチを選ぶ →"}
                   </button>
-                )}
+                ) : null}
               </div>
             ))}
           </div>
@@ -3354,116 +3380,164 @@ export default function App() {
             )}
 
             {/* 週次レポートタブ */}
-            {historyTab === "report" && (
-              <div key="report" className="page">
-                <div style={{ fontSize: 12, color: COLORS.textMuted, marginBottom: 16 }}>今週（月〜今日）の記録</div>
+            {historyTab === "report" && (() => {
+              const rNow = new Date();
+              const rDow = rNow.getDay();
+              const thisMonday = new Date(rNow);
+              thisMonday.setDate(rNow.getDate() - (rDow === 0 ? 6 : rDow - 1));
+              thisMonday.setHours(0, 0, 0, 0);
+              const rMonday = new Date(thisMonday);
+              rMonday.setDate(thisMonday.getDate() + reportWeekOffset * 7);
+              const rSunday = new Date(rMonday);
+              rSunday.setDate(rMonday.getDate() + 6);
+              const fmt = (d) => `${d.getMonth() + 1}/${d.getDate()}`;
+              const weekLabel = `${fmt(rMonday)}〜${fmt(rSunday)}`;
+              const rWeekDates = Array.from({ length: 7 }, (_, i) => {
+                const d = new Date(rMonday);
+                d.setDate(rMonday.getDate() + i);
+                return toDateStr(String(d.getFullYear()), String(d.getMonth() + 1).padStart(2, "0"), String(d.getDate()).padStart(2, "0"));
+              });
+              const rCheckins = checkins.filter(c => rWeekDates.includes(c.date));
+              const rAvgMood = rCheckins.length > 0 ? (rCheckins.reduce((s, c) => s + c.mood, 0) / rCheckins.length).toFixed(1) : null;
+              const rRecords = records.filter(r => {
+                const rd = new Date(r.date + "T00:00:00");
+                return rd >= rMonday && rd <= rSunday;
+              });
+              const rCbtCount = rRecords.filter(r => r.cbt && Object.keys(r.cbt).length > 0).length;
+              const rPsCount = rRecords.filter(r => r.ps && Object.keys(r.ps).length > 0).length;
+              const rCopingCount = rRecords.filter(r => r.coping).length;
+              const rStressCount = rRecords.length;
+              const rEmotionMap = {};
+              rRecords.forEach(r => {
+                const emotionStr = r.cbt?.emotion || r.cbt?.emotion3 || "";
+                emotionStr.split("、").forEach(e => {
+                  const match = e.trim().match(/^(.+?)\s*\d+%$/);
+                  if (match) { rEmotionMap[match[1].trim()] = (rEmotionMap[match[1].trim()] || 0) + 1; }
+                });
+              });
+              const rTopEmotions = Object.entries(rEmotionMap).sort((a, b) => b[1] - a[1]).slice(0, 3);
+              const hasAnyData = rCheckins.length > 0 || rStressCount > 0;
+              return (
+                <div key="report" className="page">
+                  {/* 週ナビゲーション */}
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16, background: COLORS.surface, borderRadius: 10, padding: "10px 14px", border: `1px solid ${COLORS.border}` }}>
+                    <button onClick={() => setReportWeekOffset(reportWeekOffset - 1)}
+                      style={{ background: "none", border: "none", color: COLORS.accent, fontSize: 20, cursor: "pointer", padding: "0 8px", lineHeight: 1 }}>←</button>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: COLORS.text }}>{weekLabel}</div>
+                    <button onClick={() => setReportWeekOffset(reportWeekOffset + 1)}
+                      disabled={reportWeekOffset >= 0}
+                      style={{ background: "none", border: "none", color: reportWeekOffset >= 0 ? COLORS.border : COLORS.accent, fontSize: 20, cursor: reportWeekOffset >= 0 ? "default" : "pointer", padding: "0 8px", lineHeight: 1 }}>→</button>
+                  </div>
 
-                {/* 気分スコア */}
-                <div style={{ background: COLORS.surface, borderRadius: 14, padding: "16px 18px", marginBottom: 12, border: `1px solid ${COLORS.border}` }}>
-                  <div style={{ fontSize: 11, color: COLORS.accent, fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", marginBottom: 10 }}>気分</div>
-                  <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
-                    {avgMood ? (
-                      <>
-                        <div style={{ fontSize: 36, fontWeight: 700, color: COLORS.accent }}>{avgMood}</div>
-                        <div style={{ fontSize: 13, color: COLORS.textMuted }}>/ 10　平均気分スコア</div>
-                      </>
-                    ) : (
-                      <div style={{ fontSize: 13, color: COLORS.textMuted }}>今週のチェックインがありません</div>
+                  {!hasAnyData ? (
+                    <div style={{ textAlign: "center", color: COLORS.textMuted, fontSize: 13, padding: "40px 0" }}>この週の記録はありません</div>
+                  ) : (
+                    <>
+                      {/* 気分スコア */}
+                      <div style={{ background: COLORS.surface, borderRadius: 14, padding: "16px 18px", marginBottom: 12, border: `1px solid ${COLORS.border}` }}>
+                        <div style={{ fontSize: 11, color: COLORS.accent, fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", marginBottom: 10 }}>気分</div>
+                        <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
+                          {rAvgMood ? (
+                            <>
+                              <div style={{ fontSize: 36, fontWeight: 700, color: COLORS.accent }}>{rAvgMood}</div>
+                              <div style={{ fontSize: 13, color: COLORS.textMuted }}>/ 10　平均気分スコア</div>
+                            </>
+                          ) : (
+                            <div style={{ fontSize: 13, color: COLORS.textMuted }}>この週のチェックインがありません</div>
+                          )}
+                        </div>
+                        {rAvgMood && (
+                          <div style={{ fontSize: 12, color: COLORS.textMuted, marginTop: 6 }}>チェックイン {rCheckins.length}回 / 7日</div>
+                        )}
+                      </div>
+
+                      {/* 取り組み回数 */}
+                      <div style={{ background: COLORS.surface, borderRadius: 14, padding: "16px 18px", marginBottom: 12, border: `1px solid ${COLORS.border}` }}>
+                        <div style={{ fontSize: 11, color: "#818cf8", fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", marginBottom: 12 }}>この週の取り組み</div>
+                        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                          {[
+                            { label: "ストレス記録", count: rStressCount, color: COLORS.accent },
+                            { label: "認知再構成", count: rCbtCount, color: COLORS.accent },
+                            { label: "問題解決技法", count: rPsCount, color: "#818cf8" },
+                            { label: "コーピング", count: rCopingCount, color: "#e0a855" },
+                          ].map(({ label, count, color }) => (
+                            <div key={label} style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                              <div style={{ fontSize: 13, color: COLORS.textMuted, minWidth: 100 }}>{label}</div>
+                              <div style={{ flex: 1, height: 6, background: COLORS.border, borderRadius: 3, overflow: "hidden" }}>
+                                <div style={{ width: count > 0 ? `${Math.min(count / 7 * 100, 100)}%` : "0%", height: "100%", background: color, borderRadius: 3, transition: "width 0.5s" }} />
+                              </div>
+                              <div style={{ fontSize: 14, fontWeight: 700, color: count > 0 ? color : COLORS.textMuted, minWidth: 24, textAlign: "right" }}>{count}</div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* よく出た感情 */}
+                      {rTopEmotions.length > 0 && (
+                        <div style={{ background: COLORS.surface, borderRadius: 14, padding: "16px 18px", marginBottom: 12, border: `1px solid ${COLORS.border}` }}>
+                          <div style={{ fontSize: 11, color: "#e0a855", fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", marginBottom: 10 }}>よく出た感情</div>
+                          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                            {rTopEmotions.map(([name, count]) => (
+                              <div key={name} style={{ padding: "6px 14px", borderRadius: 20, background: COLORS.bg, border: `1px solid ${COLORS.border}`, fontSize: 13, color: COLORS.textMuted }}>
+                                {name} <span style={{ fontSize: 11 }}>{count}回</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  )}
+
+                  {/* エクスポートボタン */}
+                  <button className="no-print" onClick={() => window.print()}
+                    style={{ width: "100%", background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 12, color: COLORS.textMuted, fontSize: 14, fontWeight: 700, padding: 14, cursor: "pointer", marginTop: 8, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+                    📄 PDFとして保存する
+                  </button>
+
+                  {/* 印刷用コンテンツ */}
+                  <div className="print-only print-container">
+                    <div className="print-title">Stride 週次レポート</div>
+                    <div className="print-meta">{weekLabel}　出力日：{`${t.year}年${parseInt(t.month)}月${parseInt(t.day)}日`}</div>
+
+                    <div className="print-section">
+                      <div className="print-label">平均気分スコア</div>
+                      <div className="print-value">{rAvgMood ? `${rAvgMood} / 10（チェックイン ${rCheckins.length}回）` : "記録なし"}</div>
+                    </div>
+
+                    <div className="print-section">
+                      <div className="print-label">取り組み</div>
+                      <div className="print-value">
+                        ストレス記録：{rStressCount}回　認知再構成：{rCbtCount}回　問題解決技法：{rPsCount}回　コーピング：{rCopingCount}回
+                      </div>
+                    </div>
+
+                    {rTopEmotions.length > 0 && (
+                      <div className="print-section">
+                        <div className="print-label">よく出た感情</div>
+                        <div className="print-value">{rTopEmotions.map(([n, c]) => `${n}（${c}回）`).join("　")}</div>
+                      </div>
+                    )}
+
+                    {rRecords.length > 0 && (
+                      <div className="print-section">
+                        <div className="print-label">ストレス記録</div>
+                        {rRecords.map((r, i) => (
+                          <div key={i} style={{ marginBottom: 12, paddingBottom: 12, borderBottom: i < rRecords.length - 1 ? "1px solid #eee" : "none" }}>
+                            <div style={{ fontSize: 12, color: "#888", marginBottom: 2 }}>{formatDate(r.date)}</div>
+                            <div className="print-value" style={{ fontWeight: 700 }}>{r.situation}</div>
+                            {r.cbt?.emotion && <div className="print-value">感情：{r.cbt.emotion}</div>}
+                            {r.cbt?.autoThought && <div className="print-value">自動思考：{r.cbt.autoThought.replace(/\n/g, " / ")}</div>}
+                            {r.cbt?.balanced && <div className="print-value">バランス思考：{r.cbt.balanced}</div>}
+                            {r.ps?.target && <div className="print-value">取り組んだ問題：{r.ps.target}</div>}
+                            {r.coping && <div className="print-value">コーピング：{r.coping}</div>}
+                          </div>
+                        ))}
+                      </div>
                     )}
                   </div>
-                  {avgMood && (
-                    <div style={{ fontSize: 12, color: COLORS.textMuted, marginTop: 6 }}>チェックイン {weekCheckins.length}回 / 7日</div>
-                  )}
                 </div>
-
-                {/* 取り組み回数 */}
-                <div style={{ background: COLORS.surface, borderRadius: 14, padding: "16px 18px", marginBottom: 12, border: `1px solid ${COLORS.border}` }}>
-                  <div style={{ fontSize: 11, color: "#818cf8", fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", marginBottom: 12 }}>今週の取り組み</div>
-                  <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                    {[
-                      { label: "ストレス記録", count: stressCount, color: COLORS.accent },
-                      { label: "認知再構成", count: cbtCount, color: COLORS.accent },
-                      { label: "問題解決技法", count: psCount, color: "#818cf8" },
-                      { label: "コーピング", count: copingCount, color: "#e0a855" },
-                    ].map(({ label, count, color }) => (
-                      <div key={label} style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                        <div style={{ fontSize: 13, color: COLORS.textMuted, minWidth: 100 }}>{label}</div>
-                        <div style={{ flex: 1, height: 6, background: COLORS.border, borderRadius: 3, overflow: "hidden" }}>
-                          <div style={{ width: count > 0 ? `${Math.min(count / 7 * 100, 100)}%` : "0%", height: "100%", background: color, borderRadius: 3, transition: "width 0.5s" }} />
-                        </div>
-                        <div style={{ fontSize: 14, fontWeight: 700, color: count > 0 ? color : COLORS.textMuted, minWidth: 24, textAlign: "right" }}>{count}</div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* よく出た感情 */}
-                {topEmotions.length > 0 && (
-                  <div style={{ background: COLORS.surface, borderRadius: 14, padding: "16px 18px", marginBottom: 12, border: `1px solid ${COLORS.border}` }}>
-                    <div style={{ fontSize: 11, color: "#e0a855", fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", marginBottom: 10 }}>よく出た感情</div>
-                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                      {topEmotions.map(([name, count], i) => (
-                        <div key={name} style={{ padding: "6px 14px", borderRadius: 20, background: COLORS.bg, border: `1px solid ${COLORS.border}`, fontSize: 13, color: COLORS.textMuted }}>
-                          {name} <span style={{ fontSize: 11 }}>{count}回</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {stressCount === 0 && weekCheckins.length === 0 && (
-                  <div style={{ textAlign: "center", color: COLORS.textMuted, fontSize: 13, padding: "20px 0" }}>今週はまだ記録がありません</div>
-                )}
-
-                {/* エクスポートボタン */}
-                <button className="no-print" onClick={() => window.print()}
-                  style={{ width: "100%", background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 12, color: COLORS.textMuted, fontSize: 14, fontWeight: 700, padding: 14, cursor: "pointer", marginTop: 8, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
-                  📄 PDFとして保存する
-                </button>
-
-                {/* 印刷用コンテンツ */}
-                <div className="print-only print-container">
-                  <div className="print-title">Stride 週次レポート</div>
-                  <div className="print-meta">出力日：{`${t.year}年${parseInt(t.month)}月${parseInt(t.day)}日`}</div>
-
-                  <div className="print-section">
-                    <div className="print-label">今週の平均気分スコア</div>
-                    <div className="print-value">{avgMood ? `${avgMood} / 10（チェックイン ${weekCheckins.length}回）` : "記録なし"}</div>
-                  </div>
-
-                  <div className="print-section">
-                    <div className="print-label">今週の取り組み</div>
-                    <div className="print-value">
-                      ストレス記録：{stressCount}回　認知再構成：{cbtCount}回　問題解決技法：{psCount}回　コーピング：{copingCount}回
-                    </div>
-                  </div>
-
-                  {topEmotions.length > 0 && (
-                    <div className="print-section">
-                      <div className="print-label">よく出た感情</div>
-                      <div className="print-value">{topEmotions.map(([n, c]) => `${n}（${c}回）`).join("　")}</div>
-                    </div>
-                  )}
-
-                  {weekRecords.length > 0 && (
-                    <div className="print-section">
-                      <div className="print-label">今週のストレス記録</div>
-                      {weekRecords.map((r, i) => (
-                        <div key={i} style={{ marginBottom: 12, paddingBottom: 12, borderBottom: i < weekRecords.length - 1 ? "1px solid #eee" : "none" }}>
-                          <div style={{ fontSize: 12, color: "#888", marginBottom: 2 }}>{formatDate(r.date)}</div>
-                          <div className="print-value" style={{ fontWeight: 700 }}>{r.situation}</div>
-                          {r.cbt?.emotion && <div className="print-value">感情：{r.cbt.emotion}</div>}
-                          {r.cbt?.autoThought && <div className="print-value">自動思考：{r.cbt.autoThought.replace(/\n/g, " / ")}</div>}
-                          {r.cbt?.balanced && <div className="print-value">バランス思考：{r.cbt.balanced}</div>}
-                          {r.ps?.target && <div className="print-value">取り組んだ問題：{r.ps.target}</div>}
-                          {r.coping && <div className="print-value">コーピング：{r.coping}</div>}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
+              );
+            })()}
 
             {/* 一覧タブ */}
             {historyTab === "list" && (
@@ -3809,14 +3883,26 @@ export default function App() {
 
       {/* PS */}
       {view === "ps" && psRecord && (() => {
+        const isBreakdownStep = PS_STEPS[psStep].id === "breakdown";
+        const isTargetStep = PS_STEPS[psStep].id === "target";
         const isSolutionsStep = PS_STEPS[psStep].id === "solutions";
         const isPlanStep = PS_STEPS[psStep].id === "plan";
         const solutionTexts = psSolutionItems.map(s => s.text).filter(t => t.trim());
+        const breakdownTexts = (psDraft.breakdown || "").split("\n").filter(t => t.trim());
 
         const goToStep = (next) => {
+          if (isBreakdownStep) {
+            const serialized = psBreakdownItems.map(s => s.text).filter(t => t.trim()).join("\n");
+            setPsDraft(prev => ({ ...prev, breakdown: serialized }));
+          }
           if (isSolutionsStep) {
             const serialized = psSolutionItems.map(s => s.text).filter(t => t.trim()).join("\n");
             setPsDraft(prev => ({ ...prev, solutions: serialized }));
+          }
+          if (PS_STEPS[next]?.id === "breakdown") {
+            const existing = psDraft.breakdown || "";
+            const lines = existing.split("\n").filter(l => l.trim());
+            setPsBreakdownItems(lines.length > 0 ? lines.map((t, i) => ({ id: i, text: t })) : [{ id: Date.now(), text: "" }]);
           }
           if (PS_STEPS[next]?.id === "solutions") {
             const existing = psDraft.solutions || "";
@@ -3842,7 +3928,47 @@ export default function App() {
               📌 {psRecord.situation}
             </div>
 
-            {isSolutionsStep ? (
+            {isBreakdownStep ? (
+              <div>
+                {psBreakdownItems.map((item, idx) => (
+                  <div key={item.id} style={{ display: "flex", gap: 8, marginBottom: 10, alignItems: "flex-start" }}>
+                    <div style={{ paddingTop: 12, fontSize: 12, color: COLORS.textMuted, minWidth: 20 }}>{idx + 1}</div>
+                    <textarea
+                      rows={2}
+                      style={{ ...inp, flex: 1, resize: "none" }}
+                      placeholder="例）ミスの原因が自分でわからない"
+                      value={item.text}
+                      onChange={(e) => setPsBreakdownItems(prev => prev.map(s => s.id === item.id ? { ...s, text: e.target.value } : s))}
+                    />
+                    {psBreakdownItems.length > 1 && (
+                      <button onClick={() => setPsBreakdownItems(prev => prev.filter(s => s.id !== item.id))}
+                        style={{ background: "none", border: "none", color: COLORS.textMuted, fontSize: 18, cursor: "pointer", padding: "8px 0", opacity: 0.5 }}>×</button>
+                    )}
+                  </div>
+                ))}
+                <button onClick={() => setPsBreakdownItems(prev => [...prev, { id: Date.now(), text: "" }])}
+                  style={{ background: "none", border: `1px dashed ${COLORS.border}`, borderRadius: 8, color: COLORS.textMuted, fontSize: 13, padding: "8px 16px", cursor: "pointer", width: "100%" }}>
+                  ＋ 困りごとを追加する
+                </button>
+              </div>
+            ) : isTargetStep ? (
+              <div>
+                {breakdownTexts.length > 0 ? (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                    {breakdownTexts.map((t, i) => (
+                      <button key={i} onClick={() => setPsDraft(prev => ({ ...prev, target: t }))}
+                        style={{ textAlign: "left", padding: "12px 16px", borderRadius: 10, border: `1.5px solid ${psDraft.target === t ? "#818cf8" : COLORS.border}`, background: psDraft.target === t ? "#818cf820" : COLORS.surface, color: psDraft.target === t ? "#818cf8" : COLORS.text, fontSize: 14, lineHeight: 1.6, cursor: "pointer", fontFamily: "inherit" }}>
+                        {i + 1}. {t}
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <div style={{ color: COLORS.textMuted, fontSize: 13, textAlign: "center", padding: 20 }}>
+                    前のステップで困りごとを入力してください
+                  </div>
+                )}
+              </div>
+            ) : isSolutionsStep ? (
               <div>
                 {psSolutionItems.map((item, idx) => (
                   <div key={item.id} style={{ display: "flex", gap: 8, marginBottom: 10, alignItems: "flex-start" }}>
@@ -3904,7 +4030,17 @@ export default function App() {
                 <button onClick={() => goToStep(psStep - 1)} style={{ flex: 1, background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 10, color: COLORS.textMuted, fontSize: 14, padding: 13, cursor: "pointer" }}>← 戻る</button>
               )}
               <button
-                onClick={() => { if (psStep < PS_STEPS.length - 1) { goToStep(psStep + 1); } else { if (isSolutionsStep) { const s = psSolutionItems.map(x => x.text).filter(t => t.trim()).join("\n"); setPsDraft(prev => ({ ...prev, solutions: s })); } finishPS(); } }}
+                onClick={() => {
+                  if (psStep < PS_STEPS.length - 1) {
+                    goToStep(psStep + 1);
+                  } else {
+                    if (isSolutionsStep) {
+                      const s = psSolutionItems.map(x => x.text).filter(t => t.trim()).join("\n");
+                      setPsDraft(prev => ({ ...prev, solutions: s }));
+                    }
+                    finishPS();
+                  }
+                }}
                 style={{ flex: 2, background: psStep === PS_STEPS.length - 1 ? COLORS.success : "#818cf8", border: "none", borderRadius: 10, color: "#fff", fontSize: 14, fontWeight: 700, padding: 13, cursor: "pointer" }}
               >
                 {psStep === PS_STEPS.length - 1 ? "✓ 完了する" : "次へ →"}
@@ -3927,6 +4063,67 @@ export default function App() {
           </div>
         );
       })()}
+
+      {/* PS 振り返り */}
+      {view === "psReview" && (() => {
+        const rec = records.find(r => r.id === psReviewId);
+        if (!rec) return null;
+        const canSave = psReviewDraft.result.trim() || psReviewDraft.insight.trim();
+        return (
+          <div className="page" style={{ padding: "20px 16px" }}>
+            <div style={{ fontSize: 11, color: "#818cf8", fontWeight: 700, letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 8 }}>
+              問題解決技法 — 振り返り
+            </div>
+            <div style={{ fontSize: 18, fontWeight: 700, lineHeight: 1.5, marginBottom: 16, color: COLORS.text }}>
+              プランを試した結果を記録しよう
+            </div>
+            <div style={{ background: COLORS.accentSoft, borderRadius: 10, padding: "10px 14px", fontSize: 12, color: COLORS.accentText, marginBottom: 16, border: `1px solid ${COLORS.border}` }}>
+              📌 {rec.situation}
+            </div>
+            {rec.ps?.target && (
+              <div style={{ background: COLORS.surface, borderRadius: 10, padding: "10px 14px", fontSize: 12, color: "#818cf8", marginBottom: 12, border: `1px solid #818cf830` }}>
+                <div style={{ fontSize: 11, color: COLORS.textMuted, marginBottom: 4 }}>取り組んだ問題</div>
+                {rec.ps.target}
+              </div>
+            )}
+            {rec.ps?.plan && (
+              <div style={{ background: COLORS.surface, borderRadius: 10, padding: "10px 14px", fontSize: 12, color: "#818cf8", marginBottom: 16, border: `1px solid #818cf830` }}>
+                <div style={{ fontSize: 11, color: COLORS.textMuted, marginBottom: 4 }}>実行したプラン</div>
+                {rec.ps.plan}
+              </div>
+            )}
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ fontSize: 14, fontWeight: 700, color: COLORS.text, marginBottom: 8 }}>試してみた結果どうだったか</div>
+              <textarea
+                rows={4}
+                style={inp}
+                placeholder="例）手順メモを作ったら、作業前に確認できてミスが減った"
+                value={psReviewDraft.result}
+                onChange={(e) => setPsReviewDraft(prev => ({ ...prev, result: e.target.value }))}
+              />
+            </div>
+            <div style={{ marginBottom: 24 }}>
+              <div style={{ fontSize: 14, fontWeight: 700, color: COLORS.text, marginBottom: 8 }}>気づいたこと</div>
+              <textarea
+                rows={4}
+                style={inp}
+                placeholder="例）全部はできなかったけど、意識するだけで少し楽になった"
+                value={psReviewDraft.insight}
+                onChange={(e) => setPsReviewDraft(prev => ({ ...prev, insight: e.target.value }))}
+              />
+            </div>
+            <button
+              onClick={savePsReview}
+              style={{ width: "100%", background: canSave ? "#818cf8" : COLORS.border, border: "none", borderRadius: 10, color: "#fff", fontSize: 14, fontWeight: 700, padding: 14, cursor: canSave ? "pointer" : "default", marginBottom: 10 }}>
+              ✓ 振り返りを保存する
+            </button>
+            <button onClick={() => setView("list")} style={{ width: "100%", background: "none", border: `1px solid ${COLORS.border}`, borderRadius: 10, color: COLORS.textMuted, fontSize: 13, padding: 12, cursor: "pointer" }}>
+              キャンセル
+            </button>
+          </div>
+        );
+      })()}
+
       {view === "cbt" && cbtRecord && (() => {
         const steps = cbtMode === "3" ? CBT3_STEPS : CBT_STEPS;
         const currentStep = steps[cbtStep];

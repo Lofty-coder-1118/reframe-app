@@ -733,6 +733,8 @@ export default function App() {
   const [psId, setPsId] = useState(null);
   const [psStep, setPsStep] = useState(0);
   const [psDraft, setPsDraft] = useState({});
+  const [psSolutionItems, setPsSolutionItems] = useState([{ id: Date.now(), text: "" }]);
+  const [psSolutionInput, setPsSolutionInput] = useState("");
 
   const [detailId, setDetailId] = useState(null);
   const [deleteTargetId, setDeleteTargetId] = useState(null);
@@ -763,6 +765,7 @@ export default function App() {
 
   const [graphType, setGraphType] = useState("line"); // "line" | "bar"
   const [graphPeriod, setGraphPeriod] = useState(14); // 14 | 30
+  const [graphMetric, setGraphMetric] = useState("mood"); // "mood" | "condition" | "sleep"
   const [historyTab, setHistoryTab] = useState("graph"); // "graph" | "report" | "list"
 
   const [achievements, setAchievements] = useState(loadAchievements);
@@ -1677,7 +1680,7 @@ export default function App() {
             {bridgeSettings.showSleep && (
               <div style={{ marginBottom: 20 }}>
                 <div style={{ fontSize: 11, fontWeight: 700, color: COLORS.accent, letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 10 }}>睡眠（直近2週間）</div>
-                <div style={{ background: COLORS.surface, borderRadius: 12, padding: "12px 14px", border: `1px solid ${COLORS.border}` }}>
+                <div style={{ background: COLORS.surface, borderRadius: 12, padding: "16px 14px 12px", border: `1px solid ${COLORS.border}` }}>
                   {last14.filter(d => d.sleep).length === 0 ? (
                     <div style={{ fontSize: 13, color: COLORS.textMuted }}>記録なし</div>
                   ) : (
@@ -3263,12 +3266,31 @@ export default function App() {
 
         const hasData = periodCheckins.some(c => c.data);
         const W = 340, H = 140, PAD = 24;
-        const dataPoints = periodCheckins.map((c, i) => ({
-          x: PAD + (i / Math.max(graphPeriod - 1, 1)) * (W - PAD * 2),
-          y: c.data ? H - PAD - ((c.data.mood - 1) / 9) * (H - PAD * 2) : null,
-          mood: c.data?.mood,
-          label: c.label,
-        }));
+
+        const conditionScore = (c) => c === "とても良い" ? 5 : c === "良い" ? 4 : c === "普通" ? 3 : c === "悪い" ? 2 : c === "とても悪い" ? 1 : null;
+        const sleepScore = (s) => s === "4時間未満" ? 1 : s === "4〜6時間" ? 2 : s === "6〜8時間" ? 3 : s === "8時間以上" ? 4 : null;
+        const metricColor = (v, m) => {
+          if (m === "mood") return moodColor(v);
+          if (m === "condition") return v >= 4 ? COLORS.accent : v >= 3 ? "#e0a855" : COLORS.danger;
+          return v >= 3 ? COLORS.accent : v === 2 ? "#e0a855" : COLORS.danger;
+        };
+        const getMetricValue = (data, m) => {
+          if (!data) return null;
+          if (m === "mood") return data.mood ?? null;
+          if (m === "condition") return conditionScore(data.condition);
+          return sleepScore(data.sleep);
+        };
+        const metricMax = graphMetric === "mood" ? 10 : graphMetric === "condition" ? 5 : 4;
+
+        const dataPoints = periodCheckins.map((c, i) => {
+          const val = getMetricValue(c.data, graphMetric);
+          return {
+            x: PAD + (i / Math.max(graphPeriod - 1, 1)) * (W - PAD * 2),
+            y: val !== null ? H - PAD - ((val - 1) / (metricMax - 1)) * (H - PAD * 2) : null,
+            val,
+            label: c.label,
+          };
+        });
 
         return (
           <div className="page" style={{ padding: "20px 16px" }}>
@@ -3286,10 +3308,10 @@ export default function App() {
             {historyTab === "graph" && (
               <div key="graph" className="page">
                 <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
-                  <div style={{ display: "flex", gap: 4, flex: 1 }}>
-                    {[{ v: "line", label: "折れ線" }, { v: "bar", label: "棒" }].map(({ v, label }) => (
-                      <button key={v} onClick={() => setGraphType(v)}
-                        style={{ flex: 1, padding: "8px", borderRadius: 8, border: `1.5px solid ${graphType === v ? COLORS.accent : COLORS.border}`, background: graphType === v ? COLORS.accentSoft : COLORS.surface, color: graphType === v ? COLORS.accent : COLORS.textMuted, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+                  <div style={{ display: "flex", gap: 4, flex: 2 }}>
+                    {[{ v: "mood", label: "気分" }, { v: "condition", label: "体調" }, { v: "sleep", label: "睡眠" }].map(({ v, label }) => (
+                      <button key={v} onClick={() => setGraphMetric(v)}
+                        style={{ flex: 1, padding: "8px", borderRadius: 8, border: `1.5px solid ${graphMetric === v ? COLORS.accent : COLORS.border}`, background: graphMetric === v ? COLORS.accentSoft : COLORS.surface, color: graphMetric === v ? COLORS.accent : COLORS.textMuted, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
                         {label}
                       </button>
                     ))}
@@ -3308,8 +3330,8 @@ export default function App() {
                     <div style={{ textAlign: "center", color: COLORS.textMuted, fontSize: 13, padding: "40px 0" }}>まだ記録がありません</div>
                   ) : (
                     <svg viewBox={`0 0 ${W} ${H}`} style={{ width: "100%", overflow: "visible" }}>
-                      {[1, 3, 5, 7, 10].map(v => {
-                        const y = H - PAD - ((v - 1) / 9) * (H - PAD * 2);
+                      {Array.from({ length: metricMax }, (_, i) => i + 1).map(v => {
+                        const y = H - PAD - ((v - 1) / (metricMax - 1)) * (H - PAD * 2);
                         return (
                           <g key={v}>
                             <line x1={PAD} y1={y} x2={W - PAD} y2={y} stroke={COLORS.border} strokeWidth="0.5" />
@@ -3317,21 +3339,11 @@ export default function App() {
                           </g>
                         );
                       })}
-                      {graphType === "bar" && dataPoints.map((p, i) => {
-                        if (!p.mood) return null;
+                      {dataPoints.map((p, i) => {
+                        if (p.val === null) return null;
                         const barW = Math.max(4, (W - PAD * 2) / graphPeriod * 0.6);
-                        return <rect key={i} x={p.x - barW / 2} y={p.y} width={barW} height={H - PAD - p.y} fill={moodColor(p.mood)} opacity="0.8" rx="2" />;
+                        return <rect key={i} x={p.x - barW / 2} y={p.y} width={barW} height={H - PAD - p.y} fill={metricColor(p.val, graphMetric)} opacity="0.8" rx="2" />;
                       })}
-                      {graphType === "line" && (() => {
-                        const pts = dataPoints.filter(p => p.mood != null);
-                        if (pts.length < 2) return null;
-                        return (
-                          <g>
-                            <path d={pts.map((p, i) => `${i === 0 ? "M" : "L"}${p.x},${p.y}`).join(" ")} fill="none" stroke={COLORS.accent} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                            {pts.map((p, i) => <circle key={i} cx={p.x} cy={p.y} r="4" fill={moodColor(p.mood)} stroke={COLORS.surface} strokeWidth="2" />)}
-                          </g>
-                        );
-                      })()}
                       {dataPoints.filter((_, i) => graphPeriod === 14 ? i % 2 === 0 : i % 5 === 0).map((p, i) => (
                         <text key={i} x={p.x} y={H - 4} textAnchor="middle" fill={COLORS.textMuted} fontSize="7">{p.label}</text>
                       ))}
@@ -3476,8 +3488,8 @@ export default function App() {
                             <div style={{ display: "flex", gap: 10, fontSize: 11, color: COLORS.textMuted }}>
                               {data.condition && <span>{data.condition}</span>}
                               {data.sleep && <span>睡眠 {data.sleep}</span>}
-                              {data.memo && <span style={{ color: COLORS.accent }}>「{data.memo}」</span>}
                             </div>
+                            {data.memo && <div style={{ fontSize: 12, color: COLORS.accent, marginTop: 4, lineHeight: 1.5 }}>「{data.memo}」</div>}
                           </div>
                         ) : (
                           <div style={{ fontSize: 13, color: COLORS.textMuted }}>記録なし</div>
@@ -3796,54 +3808,125 @@ export default function App() {
       })()}
 
       {/* PS */}
-      {view === "ps" && psRecord && (
-        <div className="page" style={{ padding: "20px 16px" }}>
-          <div style={{ display: "flex", gap: 4, marginBottom: 28 }}>
-            {PS_STEPS.map((_, i) => (
-              <div key={i} style={{ flex: 1, height: 4, borderRadius: 10, background: i <= psStep ? "#818cf8" : COLORS.border, transition: "background 0.3s" }} />
-            ))}
-          </div>
-          <div style={{ fontSize: 11, color: "#818cf8", fontWeight: 700, letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 8 }}>
-            Step {psStep + 1} / {PS_STEPS.length} — {PS_STEPS[psStep].label}
-          </div>
-          <div style={{ fontSize: 18, fontWeight: 700, lineHeight: 1.5, marginBottom: 16, color: COLORS.text }}>{PS_STEPS[psStep].question}</div>
-          <div style={{ background: COLORS.accentSoft, borderRadius: 10, padding: "10px 14px", fontSize: 12, color: COLORS.accentText, marginBottom: 16, border: `1px solid ${COLORS.border}` }}>
-            📌 {psRecord.situation}
-          </div>
-          <textarea
-            rows={5}
-            style={inp}
-            placeholder={PS_STEPS[psStep].placeholder}
-            value={psDraft[PS_STEPS[psStep].id] || ""}
-            onChange={(e) => setPsDraft({ ...psDraft, [PS_STEPS[psStep].id]: e.target.value })}
-          />
-          <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
-            {psStep > 0 && (
-              <button onClick={() => { setPsStep(psStep - 1); setShowHint(false); }} style={{ flex: 1, background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 10, color: COLORS.textMuted, fontSize: 14, padding: 13, cursor: "pointer" }}>← 戻る</button>
-            )}
-            <button
-              onClick={() => { if (psStep < PS_STEPS.length - 1) { setPsStep(psStep + 1); setShowHint(false); } else finishPS(); }}
-              style={{ flex: 2, background: psStep === PS_STEPS.length - 1 ? COLORS.success : "#818cf8", border: "none", borderRadius: 10, color: "#fff", fontSize: 14, fontWeight: 700, padding: 13, cursor: "pointer" }}
-            >
-              {psStep === PS_STEPS.length - 1 ? "✓ 完了する" : "次へ →"}
-            </button>
-          </div>
-          <div style={{ marginTop: 20 }}>
-            <button onClick={() => setShowHint(!showHint)} style={{ background: "none", border: "none", color: COLORS.textMuted, fontSize: 13, cursor: "pointer", padding: 0, display: "flex", alignItems: "center", gap: 6 }}>
-              <span style={{ fontSize: 15 }}>{showHint ? "▾" : "▸"}</span>
-              書き方のヒント
-            </button>
-            {showHint && (
-              <div style={{ marginTop: 10, background: COLORS.hint, border: `1px solid ${COLORS.hintBorder}`, borderRadius: 10, padding: "14px 16px", fontSize: 13, color: COLORS.hintText, lineHeight: 1.8, whiteSpace: "pre-line" }}>
-                {PS_STEPS[psStep].hint}
+      {view === "ps" && psRecord && (() => {
+        const isSolutionsStep = PS_STEPS[psStep].id === "solutions";
+        const isPlanStep = PS_STEPS[psStep].id === "plan";
+        const solutionTexts = psSolutionItems.map(s => s.text).filter(t => t.trim());
+
+        const goToStep = (next) => {
+          if (isSolutionsStep) {
+            const serialized = psSolutionItems.map(s => s.text).filter(t => t.trim()).join("\n");
+            setPsDraft(prev => ({ ...prev, solutions: serialized }));
+          }
+          if (PS_STEPS[next]?.id === "solutions") {
+            const existing = psDraft.solutions || "";
+            const lines = existing.split("\n").filter(l => l.trim());
+            setPsSolutionItems(lines.length > 0 ? lines.map((t, i) => ({ id: i, text: t })) : [{ id: Date.now(), text: "" }]);
+          }
+          setPsStep(next);
+          setShowHint(false);
+        };
+
+        return (
+          <div className="page" style={{ padding: "20px 16px" }}>
+            <div style={{ display: "flex", gap: 4, marginBottom: 28 }}>
+              {PS_STEPS.map((_, i) => (
+                <div key={i} style={{ flex: 1, height: 4, borderRadius: 10, background: i <= psStep ? "#818cf8" : COLORS.border, transition: "background 0.3s" }} />
+              ))}
+            </div>
+            <div style={{ fontSize: 11, color: "#818cf8", fontWeight: 700, letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 8 }}>
+              Step {psStep + 1} / {PS_STEPS.length} — {PS_STEPS[psStep].label}
+            </div>
+            <div style={{ fontSize: 18, fontWeight: 700, lineHeight: 1.5, marginBottom: 16, color: COLORS.text }}>{PS_STEPS[psStep].question}</div>
+            <div style={{ background: COLORS.accentSoft, borderRadius: 10, padding: "10px 14px", fontSize: 12, color: COLORS.accentText, marginBottom: 16, border: `1px solid ${COLORS.border}` }}>
+              📌 {psRecord.situation}
+            </div>
+
+            {isSolutionsStep ? (
+              <div>
+                {psSolutionItems.map((item, idx) => (
+                  <div key={item.id} style={{ display: "flex", gap: 8, marginBottom: 10, alignItems: "flex-start" }}>
+                    <div style={{ paddingTop: 12, fontSize: 12, color: COLORS.textMuted, minWidth: 20 }}>{idx + 1}</div>
+                    <textarea
+                      rows={2}
+                      style={{ ...inp, flex: 1, resize: "none" }}
+                      placeholder="例）作業前にメモで手順を確認する"
+                      value={item.text}
+                      onChange={(e) => setPsSolutionItems(prev => prev.map(s => s.id === item.id ? { ...s, text: e.target.value } : s))}
+                    />
+                    {psSolutionItems.length > 1 && (
+                      <button onClick={() => setPsSolutionItems(prev => prev.filter(s => s.id !== item.id))}
+                        style={{ background: "none", border: "none", color: COLORS.textMuted, fontSize: 18, cursor: "pointer", padding: "8px 0", opacity: 0.5 }}>×</button>
+                    )}
+                  </div>
+                ))}
+                <button onClick={() => setPsSolutionItems(prev => [...prev, { id: Date.now(), text: "" }])}
+                  style={{ background: "none", border: `1px dashed ${COLORS.border}`, borderRadius: 8, color: COLORS.textMuted, fontSize: 13, padding: "8px 16px", cursor: "pointer", width: "100%" }}>
+                  ＋ 解決策を追加する
+                </button>
               </div>
+            ) : isPlanStep ? (
+              <div>
+                {solutionTexts.length > 0 && (
+                  <div style={{ marginBottom: 12 }}>
+                    <div style={{ fontSize: 12, color: COLORS.textMuted, marginBottom: 8 }}>解決策から選ぶ</div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                      {solutionTexts.map((t, i) => (
+                        <button key={i} onClick={() => setPsDraft(prev => ({ ...prev, plan: t }))}
+                          style={{ textAlign: "left", padding: "10px 14px", borderRadius: 10, border: `1.5px solid ${psDraft.plan === t ? "#818cf8" : COLORS.border}`, background: psDraft.plan === t ? "#818cf820" : COLORS.surface, color: psDraft.plan === t ? "#818cf8" : COLORS.text, fontSize: 13, cursor: "pointer" }}>
+                          {i + 1}. {t}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                <div style={{ fontSize: 12, color: COLORS.textMuted, marginBottom: 6 }}>または自由に入力</div>
+                <textarea
+                  rows={3}
+                  style={inp}
+                  placeholder={PS_STEPS[psStep].placeholder}
+                  value={psDraft[PS_STEPS[psStep].id] || ""}
+                  onChange={(e) => setPsDraft({ ...psDraft, [PS_STEPS[psStep].id]: e.target.value })}
+                />
+              </div>
+            ) : (
+              <textarea
+                rows={5}
+                style={inp}
+                placeholder={PS_STEPS[psStep].placeholder}
+                value={psDraft[PS_STEPS[psStep].id] || ""}
+                onChange={(e) => setPsDraft({ ...psDraft, [PS_STEPS[psStep].id]: e.target.value })}
+              />
             )}
+
+            <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
+              {psStep > 0 && (
+                <button onClick={() => goToStep(psStep - 1)} style={{ flex: 1, background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 10, color: COLORS.textMuted, fontSize: 14, padding: 13, cursor: "pointer" }}>← 戻る</button>
+              )}
+              <button
+                onClick={() => { if (psStep < PS_STEPS.length - 1) { goToStep(psStep + 1); } else { if (isSolutionsStep) { const s = psSolutionItems.map(x => x.text).filter(t => t.trim()).join("\n"); setPsDraft(prev => ({ ...prev, solutions: s })); } finishPS(); } }}
+                style={{ flex: 2, background: psStep === PS_STEPS.length - 1 ? COLORS.success : "#818cf8", border: "none", borderRadius: 10, color: "#fff", fontSize: 14, fontWeight: 700, padding: 13, cursor: "pointer" }}
+              >
+                {psStep === PS_STEPS.length - 1 ? "✓ 完了する" : "次へ →"}
+              </button>
+            </div>
+            <div style={{ marginTop: 20 }}>
+              <button onClick={() => setShowHint(!showHint)} style={{ background: "none", border: "none", color: COLORS.textMuted, fontSize: 13, cursor: "pointer", padding: 0, display: "flex", alignItems: "center", gap: 6 }}>
+                <span style={{ fontSize: 15 }}>{showHint ? "▾" : "▸"}</span>
+                書き方のヒント
+              </button>
+              {showHint && (
+                <div style={{ marginTop: 10, background: COLORS.hint, border: `1px solid ${COLORS.hintBorder}`, borderRadius: 10, padding: "14px 16px", fontSize: 13, color: COLORS.hintText, lineHeight: 1.8, whiteSpace: "pre-line" }}>
+                  {PS_STEPS[psStep].hint}
+                </div>
+              )}
+            </div>
+            <button onClick={savePSDraft} style={{ marginTop: 20, width: "100%", background: "none", border: `1px solid ${COLORS.border}`, borderRadius: 10, color: COLORS.textMuted, fontSize: 13, padding: 12, cursor: "pointer" }}>
+              今日はここまでにする
+            </button>
           </div>
-          <button onClick={savePSDraft} style={{ marginTop: 20, width: "100%", background: "none", border: `1px solid ${COLORS.border}`, borderRadius: 10, color: COLORS.textMuted, fontSize: 13, padding: 12, cursor: "pointer" }}>
-            今日はここまでにする
-          </button>
-        </div>
-      )}
+        );
+      })()}
       {view === "cbt" && cbtRecord && (() => {
         const steps = cbtMode === "3" ? CBT3_STEPS : CBT_STEPS;
         const currentStep = steps[cbtStep];

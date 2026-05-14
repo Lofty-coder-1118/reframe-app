@@ -1680,7 +1680,7 @@ export default function App() {
             {bridgeSettings.showSleep && (
               <div style={{ marginBottom: 20 }}>
                 <div style={{ fontSize: 11, fontWeight: 700, color: COLORS.accent, letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 10 }}>睡眠（直近2週間）</div>
-                <div style={{ background: COLORS.surface, borderRadius: 12, padding: "16px 14px 12px", border: `1px solid ${COLORS.border}` }}>
+                <div style={{ background: COLORS.surface, borderRadius: 12, padding: "12px 14px", border: `1px solid ${COLORS.border}` }}>
                   {last14.filter(d => d.sleep).length === 0 ? (
                     <div style={{ fontSize: 13, color: COLORS.textMuted }}>記録なし</div>
                   ) : (
@@ -1691,7 +1691,7 @@ export default function App() {
                         const color = lv === 1 ? COLORS.danger : lv === 2 ? "#e0a855" : COLORS.accent;
                         return (
                           <div key={i} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
-                            <div style={{ height: 12, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 8, color: lv !== null ? color : "transparent", fontWeight: 700 }}>{lv ?? "0"}</div>
+                            {lv !== null && <div style={{ fontSize: 8, color, fontWeight: 700 }}>{lv}</div>}
                             <div style={{ width: "100%", height: barH, borderRadius: 2, background: color, opacity: lv !== null ? 1 : 0.2 }} />
                             <div style={{ fontSize: 7, color: COLORS.textMuted, whiteSpace: "nowrap" }}>{d.label}</div>
                           </div>

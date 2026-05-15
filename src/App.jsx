@@ -4541,7 +4541,6 @@ export default function App() {
                     onClick={() => {
                       if (inThoughtSelect) {
                         setSelectedThought(pendingThought);
-                        setCbtStep(cbtStep + 1);
                         setShowHint(false);
                       } else if (cbtStep < steps.length - 1) {
                         setCbtStep(cbtStep + 1);

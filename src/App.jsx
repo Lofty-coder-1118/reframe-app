@@ -777,6 +777,7 @@ export default function App() {
   const [copingReviewResult, setCopingReviewResult] = useState(null);
   const [copingPracticeId, setCopingPracticeId] = useState(null);
   const [copingPracticeResult, setCopingPracticeResult] = useState(null);
+  const [copingDetailId, setCopingDetailId] = useState(null);
 
   const [detailId, setDetailId] = useState(null);
   const [deleteTargetId, setDeleteTargetId] = useState(null);
@@ -848,6 +849,7 @@ export default function App() {
   const [bridgeMemos, setBridgeMemos] = useState(loadBridgeMemos);
   const [bridgeMemoInput, setBridgeMemoInput] = useState("");
   const [bridgePersonId, setBridgePersonId] = useState(null);
+  const [bridgeSessionMemoIds, setBridgeSessionMemoIds] = useState(new Set());
   const [bridgeMemoSelectDialog, setBridgeMemoSelectDialog] = useState(null);
 
   const dndSensors = useSensors(useSensor(PointerSensor));
@@ -1062,10 +1064,18 @@ export default function App() {
     setView("list");
   };
 
-  const practiceCoping = (copingId, result) => {
+  const startPractice = (copingId) => {
     setCopings(prev => prev.map(c => c.id === copingId
-      ? { ...c, practices: [...(c.practices || []), { id: Date.now(), date: toDateStr(t.year, t.month, t.day), result }] }
+      ? { ...c, pendingPractice: { id: Date.now(), date: toDateStr(t.year, t.month, t.day) } }
       : c));
+  };
+
+  const saveCopingPractice = (copingId, result) => {
+    setCopings(prev => prev.map(c => {
+      if (c.id !== copingId) return c;
+      const pending = c.pendingPractice;
+      return { ...c, practices: [...(c.practices || []), { id: pending?.id || Date.now(), date: pending?.date || toDateStr(t.year, t.month, t.day), result }], pendingPractice: null };
+    }));
     setCopingPracticeId(null);
     setCopingPracticeResult(null);
   };
@@ -1323,6 +1333,7 @@ export default function App() {
               }
               else if (view === "tellMemos") { setView("medicalTab"); setActiveTab("medical"); }
               else if (view === "tellMemoNew" || view === "tellMemoDetail" || view === "tellMemoEdit") { setView("tellMemos"); }
+              else if (view === "copingDetail") { setCopingDetailId(null); setView("coping"); }
               else if (view === "coping" || view === "crisis") { setView("tools"); setActiveTab("tools"); }
               else if (view === "mindfulness") {
                 if (mfTimerRef) { clearInterval(mfTimerRef); setMfRunning(false); setMfRemaining(null); }
@@ -1350,6 +1361,7 @@ export default function App() {
                 {view === "new" && "出来事を記録"}
                 {view === "checkin" && "今日のチェックイン"}
                 {view === "checkinHistory" && "チェックイン履歴"}
+                {view === "copingDetail" && "コーピングの詳細"}
                 {view === "coping" && "コーピングリスト"}
                 {view === "newCoping" && "コーピングを追加"}
                 {view === "crisis" && "クライシスプラン"}
@@ -1656,7 +1668,7 @@ export default function App() {
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               {tellPeople.map(p => (
-                <button key={p.id} onClick={() => { setBridgePersonId(p.id); setBridgeMemoInput(""); setView("bridge"); }}
+                <button key={p.id} onClick={() => { setBridgePersonId(p.id); setBridgeMemoInput(""); setBridgeSessionMemoIds(new Set(tellMemos.filter(m => m.personIds.includes(p.id) && !m.completed).map(m => m.id))); setView("bridge"); }}
                   style={{ width: "100%", background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 14, padding: "16px 18px", cursor: "pointer", textAlign: "left", display: "flex", alignItems: "center", gap: 14 }}>
                   <div style={{ width: 40, height: 40, borderRadius: "50%", background: `${COLORS.accent}20`, border: `1.5px solid ${COLORS.accent}50`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                     <span style={{ fontSize: 16, fontWeight: 700, color: COLORS.accent }}>{p.name[0]}</span>
@@ -1676,7 +1688,7 @@ export default function App() {
       {/* BRIDGE SESSION MAIN */}
       {view === "bridge" && (() => {
         const person = tellPeople.find(p => p.id === bridgePersonId);
-        const personAllMemos = tellMemos.filter(m => m.personIds.includes(bridgePersonId));
+        const personAllMemos = tellMemos.filter(m => m.personIds.includes(bridgePersonId) && bridgeSessionMemoIds.has(m.id));
         const personPendingMemos = personAllMemos.filter(m => !m.completed);
         const today = new Date();
         const todayDs = toDateStr(String(today.getFullYear()), String(today.getMonth() + 1).padStart(2, "0"), String(today.getDate()).padStart(2, "0"));
@@ -2898,7 +2910,7 @@ export default function App() {
                   const hasPsPlanned = rec.ps?.status === "planned";
                   const hasPsDone = rec.ps?.status === "done";
                   const hasAnyApproach = (rec.cbt && Object.keys(rec.cbt).length > 0) || (rec.ps && Object.keys(rec.ps).length > 0) || rec.copingStatus;
-                  const showApproach = !rec.completed && !hasCopingPending && !hasPsPlanned;
+                  const showApproach = !rec.completed && !hasCopingPending && !hasCopingDone && !hasPsPlanned && !hasPsDone;
                   return (
                     <div>
                       {hasCopingPending && (
@@ -2980,9 +2992,9 @@ export default function App() {
             {sortedCopings.map((c) => (
               <div key={c.id} id={`coping-${c.id}`} style={{ background: COLORS.surface, borderRadius: 12, padding: "14px 16px", border: `1px solid ${COLORS.border}` }}>
                 <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
-                  <div style={{ flex: 1, fontSize: 15, lineHeight: 1.6, color: COLORS.text }}>{c.text}</div>
+                  <div style={{ flex: 1, fontSize: 15, lineHeight: 1.6, color: COLORS.text, cursor: "pointer" }} onClick={() => { setCopingDetailId(c.id); setView("copingDetail"); }}>{c.text}</div>
                   <div style={{ display: "flex", gap: 6, flexShrink: 0, alignItems: "center" }}>
-                    {!(c.practices?.length) && (
+                    {c.pendingPractice && (
                       <span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 8, background: "#e0a85520", border: `1px solid #e0a85540`, color: "#e0a855", whiteSpace: "nowrap" }}>振り返りがまだ</span>
                     )}
                     <button onClick={() => { setCopingEditId(c.id); setCopingEditText(c.text); setCopingEditDifficulty(c.difficulty); setCopingEditEffect(c.effect); }}
@@ -3007,13 +3019,59 @@ export default function App() {
                     ))}
                   </div>
                 )}
-                <button onClick={() => { setCopingPracticeId(c.id); setCopingPracticeResult(null); }}
-                  style={{ marginTop: 10, width: "100%", background: COLORS.accentSoft, border: "none", borderRadius: 8, color: COLORS.accentText, fontSize: 13, fontWeight: 700, padding: "10px", cursor: "pointer" }}>
-                  実践する
-                </button>
+                {c.pendingPractice && (
+                  <button onClick={() => { setCopingPracticeId(c.id); setCopingPracticeResult(null); }}
+                    style={{ marginTop: 10, width: "100%", background: "#e0a85510", border: `1px solid #e0a85540`, borderRadius: 8, color: "#e0a855", fontSize: 13, fontWeight: 700, padding: "10px", cursor: "pointer" }}>
+                    振り返りを記録する
+                  </button>
+                )}
               </div>
             ))}
           </div>
+
+      {view === "copingDetail" && (() => {
+        const c = copings.find(x => x.id === copingDetailId);
+        if (!c) return null;
+        return (
+          <div className="page" style={{ padding: "20px 16px" }}>
+            <div style={{ fontSize: 20, fontWeight: 700, color: COLORS.text, marginBottom: 12, lineHeight: 1.5 }}>{c.text}</div>
+            <div style={{ display: "flex", gap: 20, marginBottom: 24 }}>
+              <div style={{ fontSize: 13, color: COLORS.textMuted }}>難易度 <span style={{ fontWeight: 700, color: COLORS.text }}>{c.difficulty}</span><span style={{ color: COLORS.border }}> / 5</span></div>
+              <div style={{ fontSize: 13, color: COLORS.textMuted }}>効果 <span style={{ fontWeight: 700, color: COLORS.text }}>{c.effect}</span><span style={{ color: COLORS.border }}> / 5</span></div>
+            </div>
+            {c.pendingPractice ? (
+              <div style={{ marginBottom: 24 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+                  <span style={{ fontSize: 12, padding: "3px 10px", borderRadius: 8, background: "#e0a85520", border: `1px solid #e0a85540`, color: "#e0a855", fontWeight: 700 }}>振り返りがまだ</span>
+                </div>
+                <button onClick={() => { setCopingPracticeId(c.id); setCopingPracticeResult(null); }}
+                  style={{ width: "100%", background: "#e0a85510", border: `1px solid #e0a85540`, borderRadius: 10, color: "#e0a855", fontSize: 14, fontWeight: 700, padding: 14, cursor: "pointer" }}>
+                  振り返りを記録する
+                </button>
+              </div>
+            ) : (
+              <button onClick={() => startPractice(c.id)}
+                style={{ width: "100%", background: COLORS.accentSoft, border: "none", borderRadius: 10, color: COLORS.accentText, fontSize: 14, fontWeight: 700, padding: 14, cursor: "pointer", marginBottom: 24 }}>
+                実践する
+              </button>
+            )}
+            {c.practices?.length > 0 && (
+              <div>
+                <div style={{ fontSize: 12, color: COLORS.textMuted, fontWeight: 700, letterSpacing: 1, marginBottom: 12, paddingBottom: 8, borderBottom: `1px solid ${COLORS.border}` }}>過去の実践記録</div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  {[...c.practices].reverse().map(p => (
+                    <div key={p.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: COLORS.surface, borderRadius: 10, padding: "10px 14px", border: `1px solid ${COLORS.border}` }}>
+                      <span style={{ fontSize: 13, color: COLORS.textMuted }}>{p.date}</span>
+                      <span style={{ fontSize: 13, fontWeight: 600, color: p.result === "よかった" ? COLORS.success : p.result === "あまり効かなかった" ? COLORS.textMuted : COLORS.text }}>{p.result}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            <BottomNav onBack={() => { setCopingDetailId(null); setView("coping"); }} onHome={() => { setView("home"); setActiveTab("home"); }} />
+          </div>
+        );
+      })()}
 
           {/* 実践モーダル */}
           {copingPracticeId && (
@@ -3031,7 +3089,7 @@ export default function App() {
                 <div style={{ display: "flex", gap: 10 }}>
                   <button onClick={() => { setCopingPracticeId(null); setCopingPracticeResult(null); }}
                     style={{ flex: 1, background: COLORS.bg, border: `1px solid ${COLORS.border}`, borderRadius: 10, color: COLORS.textMuted, fontSize: 14, padding: 12, cursor: "pointer" }}>キャンセル</button>
-                  <button onClick={() => practiceCoping(copingPracticeId, copingPracticeResult)}
+                  <button onClick={() => saveCopingPractice(copingPracticeId, copingPracticeResult)}
                     disabled={!copingPracticeResult}
                     style={{ flex: 2, background: copingPracticeResult ? COLORS.accent : COLORS.border, border: "none", borderRadius: 10, color: copingPracticeResult ? "#0f1117" : COLORS.textMuted, fontSize: 14, fontWeight: 700, padding: 12, cursor: copingPracticeResult ? "pointer" : "default" }}>
                     記録する
@@ -3924,6 +3982,23 @@ export default function App() {
                   </div>
                 </div>
               ) : null)}
+              {selectedDetail.ps?.review && (
+                <div style={{ marginTop: 4 }}>
+                  <div style={{ fontSize: 11, color: "#818cf8", fontWeight: 700, letterSpacing: 1, marginBottom: 8, paddingTop: 8, borderTop: `1px solid ${COLORS.border}` }}>振り返り</div>
+                  {selectedDetail.ps.review.result && (
+                    <div style={{ marginBottom: 10 }}>
+                      <div style={{ fontSize: 11, color: COLORS.textMuted, fontWeight: 700, letterSpacing: 1, marginBottom: 5, textTransform: "uppercase" }}>試してみた結果</div>
+                      <div style={{ background: COLORS.surface, borderRadius: 10, padding: "12px 14px", fontSize: 14, lineHeight: 1.7, border: `1px solid ${COLORS.border}` }}>{selectedDetail.ps.review.result}</div>
+                    </div>
+                  )}
+                  {selectedDetail.ps.review.insight && (
+                    <div>
+                      <div style={{ fontSize: 11, color: COLORS.textMuted, fontWeight: 700, letterSpacing: 1, marginBottom: 5, textTransform: "uppercase" }}>気づいたこと</div>
+                      <div style={{ background: COLORS.surface, borderRadius: 10, padding: "12px 14px", fontSize: 14, lineHeight: 1.7, border: `1px solid ${COLORS.border}` }}>{selectedDetail.ps.review.insight}</div>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
 

@@ -3029,76 +3029,6 @@ export default function App() {
             ))}
           </div>
 
-      {view === "copingDetail" && (() => {
-        const c = copings.find(x => x.id === copingDetailId);
-        if (!c) return null;
-        return (
-          <div className="page" style={{ padding: "20px 16px" }}>
-            <div style={{ fontSize: 20, fontWeight: 700, color: COLORS.text, marginBottom: 12, lineHeight: 1.5 }}>{c.text}</div>
-            <div style={{ display: "flex", gap: 20, marginBottom: 24 }}>
-              <div style={{ fontSize: 13, color: COLORS.textMuted }}>難易度 <span style={{ fontWeight: 700, color: COLORS.text }}>{c.difficulty}</span><span style={{ color: COLORS.border }}> / 5</span></div>
-              <div style={{ fontSize: 13, color: COLORS.textMuted }}>効果 <span style={{ fontWeight: 700, color: COLORS.text }}>{c.effect}</span><span style={{ color: COLORS.border }}> / 5</span></div>
-            </div>
-            {c.pendingPractice ? (
-              <div style={{ marginBottom: 24 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-                  <span style={{ fontSize: 12, padding: "3px 10px", borderRadius: 8, background: "#e0a85520", border: `1px solid #e0a85540`, color: "#e0a855", fontWeight: 700 }}>振り返りがまだ</span>
-                </div>
-                <button onClick={() => { setCopingPracticeId(c.id); setCopingPracticeResult(null); }}
-                  style={{ width: "100%", background: "#e0a85510", border: `1px solid #e0a85540`, borderRadius: 10, color: "#e0a855", fontSize: 14, fontWeight: 700, padding: 14, cursor: "pointer" }}>
-                  振り返りを記録する
-                </button>
-              </div>
-            ) : (
-              <button onClick={() => startPractice(c.id)}
-                style={{ width: "100%", background: COLORS.accentSoft, border: "none", borderRadius: 10, color: COLORS.accentText, fontSize: 14, fontWeight: 700, padding: 14, cursor: "pointer", marginBottom: 24 }}>
-                実践する
-              </button>
-            )}
-            {c.practices?.length > 0 && (
-              <div>
-                <div style={{ fontSize: 12, color: COLORS.textMuted, fontWeight: 700, letterSpacing: 1, marginBottom: 12, paddingBottom: 8, borderBottom: `1px solid ${COLORS.border}` }}>過去の実践記録</div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                  {[...c.practices].reverse().map(p => (
-                    <div key={p.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: COLORS.surface, borderRadius: 10, padding: "10px 14px", border: `1px solid ${COLORS.border}` }}>
-                      <span style={{ fontSize: 13, color: COLORS.textMuted }}>{p.date}</span>
-                      <span style={{ fontSize: 13, fontWeight: 600, color: p.result === "よかった" ? COLORS.success : p.result === "あまり効かなかった" ? COLORS.textMuted : COLORS.text }}>{p.result}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-            <BottomNav onBack={() => { setCopingDetailId(null); setView("coping"); }} onHome={() => { setView("home"); setActiveTab("home"); }} />
-          </div>
-        );
-      })()}
-
-          {/* 実践モーダル */}
-          {copingPracticeId && (
-            <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", padding: 24, zIndex: 300 }}>
-              <div style={{ background: COLORS.surface, borderRadius: 16, padding: 24, width: "100%", maxWidth: 320 }}>
-                <div style={{ fontSize: 16, fontWeight: 700, color: COLORS.text, marginBottom: 16 }}>どうだった？</div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 20 }}>
-                  {["よかった", "普通", "あまり効かなかった"].map(r => (
-                    <button key={r} onClick={() => setCopingPracticeResult(r)}
-                      style={{ padding: "12px 16px", borderRadius: 10, border: `1.5px solid ${copingPracticeResult === r ? COLORS.accent : COLORS.border}`, background: copingPracticeResult === r ? COLORS.accentSoft : COLORS.bg, color: copingPracticeResult === r ? COLORS.accentText : COLORS.text, fontSize: 14, fontWeight: copingPracticeResult === r ? 700 : 400, cursor: "pointer" }}>
-                      {r}
-                    </button>
-                  ))}
-                </div>
-                <div style={{ display: "flex", gap: 10 }}>
-                  <button onClick={() => { setCopingPracticeId(null); setCopingPracticeResult(null); }}
-                    style={{ flex: 1, background: COLORS.bg, border: `1px solid ${COLORS.border}`, borderRadius: 10, color: COLORS.textMuted, fontSize: 14, padding: 12, cursor: "pointer" }}>キャンセル</button>
-                  <button onClick={() => saveCopingPractice(copingPracticeId, copingPracticeResult)}
-                    disabled={!copingPracticeResult}
-                    style={{ flex: 2, background: copingPracticeResult ? COLORS.accent : COLORS.border, border: "none", borderRadius: 10, color: copingPracticeResult ? "#0f1117" : COLORS.textMuted, fontSize: 14, fontWeight: 700, padding: 12, cursor: copingPracticeResult ? "pointer" : "default" }}>
-                    記録する
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-
           {/* コーピング削除確認 */}
           {copingDeleteId && (
             <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", display: "flex", alignItems: "center", justifyContent: "center", padding: 24, zIndex: 300 }}>
@@ -3155,6 +3085,76 @@ export default function App() {
             </div>
           )}
           <BottomNav onBack={() => { setView("tools"); setActiveTab("tools"); }} onHome={() => { setView("home"); setActiveTab("home"); }} />
+        </div>
+      )}
+
+      {view === "copingDetail" && (() => {
+        const c = copings.find(x => x.id === copingDetailId);
+        if (!c) return null;
+        return (
+          <div className="page" style={{ padding: "20px 16px" }}>
+            <div style={{ fontSize: 20, fontWeight: 700, color: COLORS.text, marginBottom: 12, lineHeight: 1.5 }}>{c.text}</div>
+            <div style={{ display: "flex", gap: 20, marginBottom: 24 }}>
+              <div style={{ fontSize: 13, color: COLORS.textMuted }}>難易度 <span style={{ fontWeight: 700, color: COLORS.text }}>{c.difficulty}</span><span style={{ color: COLORS.border }}> / 5</span></div>
+              <div style={{ fontSize: 13, color: COLORS.textMuted }}>効果 <span style={{ fontWeight: 700, color: COLORS.text }}>{c.effect}</span><span style={{ color: COLORS.border }}> / 5</span></div>
+            </div>
+            {c.pendingPractice ? (
+              <div style={{ marginBottom: 24 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+                  <span style={{ fontSize: 12, padding: "3px 10px", borderRadius: 8, background: "#e0a85520", border: `1px solid #e0a85540`, color: "#e0a855", fontWeight: 700 }}>振り返りがまだ</span>
+                </div>
+                <button onClick={() => { setCopingPracticeId(c.id); setCopingPracticeResult(null); }}
+                  style={{ width: "100%", background: "#e0a85510", border: `1px solid #e0a85540`, borderRadius: 10, color: "#e0a855", fontSize: 14, fontWeight: 700, padding: 14, cursor: "pointer" }}>
+                  振り返りを記録する
+                </button>
+              </div>
+            ) : (
+              <button onClick={() => startPractice(c.id)}
+                style={{ width: "100%", background: COLORS.accentSoft, border: "none", borderRadius: 10, color: COLORS.accentText, fontSize: 14, fontWeight: 700, padding: 14, cursor: "pointer", marginBottom: 24 }}>
+                実践する
+              </button>
+            )}
+            {c.practices?.length > 0 && (
+              <div>
+                <div style={{ fontSize: 12, color: COLORS.textMuted, fontWeight: 700, letterSpacing: 1, marginBottom: 12, paddingBottom: 8, borderBottom: `1px solid ${COLORS.border}` }}>過去の実践記録</div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  {[...c.practices].reverse().map(p => (
+                    <div key={p.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: COLORS.surface, borderRadius: 10, padding: "10px 14px", border: `1px solid ${COLORS.border}` }}>
+                      <span style={{ fontSize: 13, color: COLORS.textMuted }}>{p.date}</span>
+                      <span style={{ fontSize: 13, fontWeight: 600, color: p.result === "よかった" ? COLORS.success : p.result === "あまり効かなかった" ? COLORS.textMuted : COLORS.text }}>{p.result}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            <BottomNav onBack={() => { setCopingDetailId(null); setView("coping"); }} onHome={() => { setView("home"); setActiveTab("home"); }} />
+          </div>
+        );
+      })()}
+
+      {/* 実践モーダル */}
+      {copingPracticeId && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", padding: 24, zIndex: 300 }}>
+          <div style={{ background: COLORS.surface, borderRadius: 16, padding: 24, width: "100%", maxWidth: 320 }}>
+            <div style={{ fontSize: 16, fontWeight: 700, color: COLORS.text, marginBottom: 16 }}>どうだった？</div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 20 }}>
+              {["よかった", "普通", "あまり効かなかった"].map(r => (
+                <button key={r} onClick={() => setCopingPracticeResult(r)}
+                  style={{ padding: "12px 16px", borderRadius: 10, border: `1.5px solid ${copingPracticeResult === r ? COLORS.accent : COLORS.border}`, background: copingPracticeResult === r ? COLORS.accentSoft : COLORS.bg, color: copingPracticeResult === r ? COLORS.accentText : COLORS.text, fontSize: 14, fontWeight: copingPracticeResult === r ? 700 : 400, cursor: "pointer" }}>
+                  {r}
+                </button>
+              ))}
+            </div>
+            <div style={{ display: "flex", gap: 10 }}>
+              <button onClick={() => { setCopingPracticeId(null); setCopingPracticeResult(null); }}
+                style={{ flex: 1, background: COLORS.bg, border: `1px solid ${COLORS.border}`, borderRadius: 10, color: COLORS.textMuted, fontSize: 14, padding: 12, cursor: "pointer" }}>キャンセル</button>
+              <button onClick={() => saveCopingPractice(copingPracticeId, copingPracticeResult)}
+                disabled={!copingPracticeResult}
+                style={{ flex: 2, background: copingPracticeResult ? COLORS.accent : COLORS.border, border: "none", borderRadius: 10, color: copingPracticeResult ? "#0f1117" : COLORS.textMuted, fontSize: 14, fontWeight: 700, padding: 12, cursor: copingPracticeResult ? "pointer" : "default" }}>
+                記録する
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

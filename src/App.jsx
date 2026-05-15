@@ -85,13 +85,6 @@ const CBT_STEPS = [
     hint: "当てはまると思うものを選んでみよう。複数あってもOK。「これかも」くらいで大丈夫。選ばなくてもOK。",
   },
   {
-    id: "selectThought",
-    label: "検証する自動思考",
-    question: "根拠・反証を検証したい自動思考を一つ選ぼう",
-    placeholder: "",
-    hint: "複数の自動思考がある場合、一番気になるものや、一番強く信じているものを選ぼう。\n選んだ思考に対して、根拠と反証を丁寧に検討していくよ。",
-  },
-  {
     id: "evidence_for",
     label: "根拠（そう思う理由）",
     question: "その考えを支持する事実は？",
@@ -3937,7 +3930,7 @@ export default function App() {
           <button onClick={() => startApproach(selectedDetail.id)} style={{ width: "100%", background: COLORS.accent, border: "none", borderRadius: 12, color: "#fff", fontSize: 15, fontWeight: 700, padding: 14, cursor: "pointer", marginTop: 8 }}>
             アプローチを選ぶ →
           </button>
-          <BottomNav onHome={() => { setView("home"); setActiveTab("home"); }} />
+          <BottomNav onBack={() => { setView("list"); setEditing(false); }} onHome={() => { setView("home"); setActiveTab("home"); }} />
         </div>
       )}
 
@@ -4404,84 +4397,138 @@ export default function App() {
           <div style={{ fontSize: 11, color: COLORS.accent, fontWeight: 700, letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 8 }}>
             Step {cbtStep + 1} / {steps.length} — {currentStep.label}
           </div>
-          <div style={{ fontSize: 18, fontWeight: 700, lineHeight: 1.5, marginBottom: 16, color: COLORS.text }}>{currentStep.question}</div>
-          <div style={{ background: COLORS.accentSoft, borderRadius: 10, padding: "10px 14px", fontSize: 12, color: COLORS.accentText, marginBottom: 16, border: `1px solid ${COLORS.border}` }}>
-            📌 {cbtRecord.situation}
-          </div>
-          {currentStep.id === "reEmotion" && cbtDraft["emotion"] && (
-            <div style={{ background: COLORS.surface, borderRadius: 10, padding: "10px 14px", fontSize: 12, color: COLORS.textMuted, marginBottom: 16, border: `1px solid ${COLORS.border}` }}>
-              <div style={{ fontSize: 11, fontWeight: 700, color: COLORS.textMuted, marginBottom: 4 }}>最初の感情</div>
-              <div style={{ color: COLORS.text }}>{cbtDraft["emotion"]}</div>
-            </div>
-          )}
-          {currentStep.id === "autoThought" || currentStep.id === "autoThought3" ? (
-            <AutoThoughtInput
-              value={cbtDraft[currentStep.id] || ""}
-              onChange={(val) => setCbtDraft({ ...cbtDraft, [currentStep.id]: val })}
-            />
-          ) : (currentStep.id === "cogPattern" || currentStep.id === "cogPattern3") ? (
-            <div>
-              {COG_PATTERNS.map(p => {
-                const patterns = (cbtDraft[currentStep.id] || "").split(",").filter(s => s.trim());
-                const isSelected = patterns.includes(p.label);
+          {(() => {
+            const sid = currentStep.id;
+            const autoThoughts = (cbtDraft["autoThought"] || cbtDraft["autoThought3"] || "").split("\n").filter(s => s.trim());
+            const effectiveThought = selectedThought || (autoThoughts.length === 1 ? autoThoughts[0] : null);
+            const inThoughtSelect = sid === "evidence_for" && !effectiveThought && autoThoughts.length > 0;
+            const displayQuestion = inThoughtSelect ? "根拠・反証を検証したい自動思考を一つ選ぼう" : currentStep.question;
+            const situation = cbtDraft["situation7"] || cbtDraft["situation3"] || cbtRecord.situation;
+
+            const pinStyle = { background: COLORS.accentSoft, borderRadius: 10, padding: "10px 14px", fontSize: 12, color: COLORS.accentText, marginBottom: 16, border: `1px solid ${COLORS.border}` };
+            const subCardStyle = { background: COLORS.surface, borderRadius: 10, padding: "10px 14px", fontSize: 12, color: COLORS.textMuted, marginBottom: 10, border: `1px solid ${COLORS.border}` };
+
+            const pinNode = (() => {
+              if (sid === "situation7" || sid === "situation3") {
+                return <div style={pinStyle}>📌 {cbtRecord.situation}</div>;
+              }
+              if (["emotion", "emotion3", "autoThought", "autoThought3"].includes(sid)) {
+                return <div style={pinStyle}>📌 {situation}</div>;
+              }
+              if (sid === "cogPattern" || sid === "cogPattern3") {
+                if (autoThoughts.length === 0) return null;
                 return (
-                  <button key={p.label} onClick={() => {
-                    const next = isSelected ? patterns.filter(x => x !== p.label) : [...patterns, p.label];
-                    setCbtDraft({ ...cbtDraft, [currentStep.id]: next.join(",") });
-                  }}
-                    style={{ width: "100%", textAlign: "left", padding: "12px 16px", marginBottom: 8, borderRadius: 10, border: `1.5px solid ${isSelected ? COLORS.accent : COLORS.border}`, background: isSelected ? COLORS.accentSoft : COLORS.surface, cursor: "pointer", fontFamily: "inherit", display: "block" }}>
-                    <div style={{ fontSize: 14, fontWeight: 700, color: isSelected ? COLORS.accent : COLORS.text, marginBottom: p.desc ? 2 : 0 }}>{p.label}</div>
-                    {p.desc && <div style={{ fontSize: 12, color: COLORS.textMuted }}>{p.desc}</div>}
-                  </button>
+                  <div style={pinStyle}>
+                    {autoThoughts.map((t, i) => (
+                      <div key={i} style={{ display: "flex", gap: 6, marginBottom: i < autoThoughts.length - 1 ? 4 : 0 }}>
+                        <span style={{ opacity: 0.6, minWidth: 14 }}>{i + 1}.</span>
+                        <span>{t}</span>
+                      </div>
+                    ))}
+                  </div>
                 );
-              })}
-            </div>
-          ) : currentStep.id === "selectThought" ? (
-            <div>
-              {(cbtDraft["autoThought"] || "").split("\n").filter(s => s.trim()).map((thought, idx) => (
-                <button key={idx} onClick={() => { setSelectedThought(thought); setCbtDraft({ ...cbtDraft, selectThought: thought }); }}
-                  style={{ width: "100%", textAlign: "left", padding: "14px 16px", marginBottom: 10, borderRadius: 10, border: `2px solid ${selectedThought === thought ? COLORS.accent : COLORS.border}`, background: selectedThought === thought ? COLORS.accentSoft : COLORS.surface, color: selectedThought === thought ? COLORS.accent : COLORS.text, fontSize: 14, lineHeight: 1.6, cursor: "pointer", fontFamily: "inherit" }}>
-                  {thought}
-                </button>
-              ))}
-              {!(cbtDraft["autoThought"] || "").trim() && (
-                <div style={{ color: COLORS.textMuted, fontSize: 13, textAlign: "center", padding: 20 }}>自動思考が入力されていません</div>
-              )}
-            </div>
-          ) : (currentStep.id !== "emotion" && currentStep.id !== "reEmotion" && currentStep.id !== "emotion3") ? (
-            <>
-              {(currentStep.id === "evidence_for" || currentStep.id === "evidence_against" || currentStep.id === "balanced") && (selectedThought || cbtDraft["selectThought"]) && (
-                <div style={{ background: COLORS.surface, borderRadius: 10, padding: "10px 14px", fontSize: 12, color: COLORS.accent, marginBottom: 12, border: `1px solid ${COLORS.accent}30` }}>
-                  <div style={{ fontSize: 11, color: COLORS.textMuted, marginBottom: 4 }}>検証する自動思考</div>
-                  {selectedThought || cbtDraft["selectThought"]}
+              }
+              if (sid === "evidence_for" && inThoughtSelect) {
+                return <div style={pinStyle}>📌 {situation}</div>;
+              }
+              if (sid === "evidence_for" || sid === "evidence_against") {
+                return effectiveThought ? <div style={pinStyle}>📌 {effectiveThought}</div> : null;
+              }
+              if (sid === "balanced") {
+                return (
+                  <>
+                    {effectiveThought && <div style={{ ...pinStyle, marginBottom: 10 }}>📌 {effectiveThought}</div>}
+                    {cbtDraft["evidence_for"] && (
+                      <div style={subCardStyle}>
+                        <div style={{ fontSize: 11, fontWeight: 700, marginBottom: 4 }}>根拠（そう思う理由）</div>
+                        <div style={{ color: COLORS.text }}>{cbtDraft["evidence_for"]}</div>
+                      </div>
+                    )}
+                    {cbtDraft["evidence_against"] && (
+                      <div style={{ ...subCardStyle, marginBottom: 16 }}>
+                        <div style={{ fontSize: 11, fontWeight: 700, marginBottom: 4 }}>反証（別の見方）</div>
+                        <div style={{ color: COLORS.text }}>{cbtDraft["evidence_against"]}</div>
+                      </div>
+                    )}
+                  </>
+                );
+              }
+              if (sid === "reEmotion") {
+                return <div style={pinStyle}>📌 {situation}</div>;
+              }
+              return null;
+            })();
+
+            return (
+              <>
+                <div style={{ fontSize: 18, fontWeight: 700, lineHeight: 1.5, marginBottom: 16, color: COLORS.text }}>{displayQuestion}</div>
+                {pinNode}
+                {sid === "reEmotion" && cbtDraft["emotion"] && (
+                  <div style={{ background: COLORS.surface, borderRadius: 10, padding: "10px 14px", fontSize: 12, color: COLORS.textMuted, marginBottom: 16, border: `1px solid ${COLORS.border}` }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: COLORS.textMuted, marginBottom: 4 }}>最初の感情</div>
+                    <div style={{ color: COLORS.text }}>{cbtDraft["emotion"]}</div>
+                  </div>
+                )}
+                {sid === "autoThought" || sid === "autoThought3" ? (
+                  <AutoThoughtInput
+                    value={cbtDraft[sid] || ""}
+                    onChange={(val) => setCbtDraft({ ...cbtDraft, [sid]: val })}
+                  />
+                ) : (sid === "cogPattern" || sid === "cogPattern3") ? (
+                  <div>
+                    {COG_PATTERNS.map(p => {
+                      const patterns = (cbtDraft[sid] || "").split(",").filter(s => s.trim());
+                      const isSelected = patterns.includes(p.label);
+                      return (
+                        <button key={p.label} onClick={() => {
+                          const next = isSelected ? patterns.filter(x => x !== p.label) : [...patterns, p.label];
+                          setCbtDraft({ ...cbtDraft, [sid]: next.join(",") });
+                        }}
+                          style={{ width: "100%", textAlign: "left", padding: "12px 16px", marginBottom: 8, borderRadius: 10, border: `1.5px solid ${isSelected ? COLORS.accent : COLORS.border}`, background: isSelected ? COLORS.accentSoft : COLORS.surface, cursor: "pointer", fontFamily: "inherit", display: "block" }}>
+                          <div style={{ fontSize: 14, fontWeight: 700, color: isSelected ? COLORS.accent : COLORS.text, marginBottom: p.desc ? 2 : 0 }}>{p.label}</div>
+                          {p.desc && <div style={{ fontSize: 12, color: COLORS.textMuted }}>{p.desc}</div>}
+                        </button>
+                      );
+                    })}
+                  </div>
+                ) : inThoughtSelect ? (
+                  <div>
+                    {autoThoughts.map((thought, idx) => (
+                      <button key={idx} onClick={() => setSelectedThought(thought)}
+                        style={{ width: "100%", textAlign: "left", padding: "14px 16px", marginBottom: 10, borderRadius: 10, border: `2px solid ${COLORS.border}`, background: COLORS.surface, color: COLORS.text, fontSize: 14, lineHeight: 1.6, cursor: "pointer", fontFamily: "inherit" }}>
+                        {thought}
+                      </button>
+                    ))}
+                  </div>
+                ) : (sid !== "emotion" && sid !== "reEmotion" && sid !== "emotion3") ? (
+                  <textarea
+                    rows={5}
+                    style={inp}
+                    placeholder={currentStep.placeholder}
+                    value={cbtDraft[sid] || ""}
+                    onChange={(e) => setCbtDraft({ ...cbtDraft, [sid]: e.target.value })}
+                  />
+                ) : (
+                  <EmotionInput
+                    value={cbtDraft[sid] || ""}
+                    onChange={(val) => setCbtDraft({ ...cbtDraft, [sid]: val })}
+                  />
+                )}
+                <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
+                  {cbtStep > 0 && (
+                    <button onClick={() => { setCbtStep(cbtStep - 1); setShowHint(false); }} style={{ flex: 1, background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 10, color: COLORS.textMuted, fontSize: 14, padding: 13, cursor: "pointer" }}>← 戻る</button>
+                  )}
+                  <button
+                    onClick={() => { if (cbtStep < steps.length - 1) { setCbtStep(cbtStep + 1); setShowHint(false); } else finishCBT(); }}
+                    disabled={inThoughtSelect}
+                    style={{ flex: 2, background: inThoughtSelect ? COLORS.border : cbtStep === steps.length - 1 ? COLORS.success : COLORS.accent, border: "none", borderRadius: 10, color: inThoughtSelect ? COLORS.textMuted : "#fff", fontSize: 14, fontWeight: 700, padding: 13, cursor: inThoughtSelect ? "default" : "pointer" }}
+                  >
+                    {cbtStep === steps.length - 1 ? "✓ 完了する" : "次へ →"}
+                  </button>
                 </div>
-              )}
-              <textarea
-                rows={5}
-                style={inp}
-                placeholder={currentStep.placeholder}
-                value={cbtDraft[currentStep.id] || ""}
-                onChange={(e) => setCbtDraft({ ...cbtDraft, [currentStep.id]: e.target.value })}
-              />
-            </>
-          ) : (
-            <EmotionInput
-              value={cbtDraft[currentStep.id] || ""}
-              onChange={(val) => setCbtDraft({ ...cbtDraft, [currentStep.id]: val })}
-            />
-          )}
-          <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
-            {cbtStep > 0 && (
-              <button onClick={() => { setCbtStep(cbtStep - 1); setShowHint(false); }} style={{ flex: 1, background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 10, color: COLORS.textMuted, fontSize: 14, padding: 13, cursor: "pointer" }}>← 戻る</button>
-            )}
-            <button
-              onClick={() => { if (cbtStep < steps.length - 1) { setCbtStep(cbtStep + 1); setShowHint(false); } else finishCBT(); }}
-              disabled={currentStep.id === "selectThought" && !cbtDraft["selectThought"]}
-              style={{ flex: 2, background: currentStep.id === "selectThought" && !cbtDraft["selectThought"] ? COLORS.border : cbtStep === steps.length - 1 ? COLORS.success : COLORS.accent, border: "none", borderRadius: 10, color: "#fff", fontSize: 14, fontWeight: 700, padding: 13, cursor: currentStep.id === "selectThought" && !cbtDraft["selectThought"] ? "default" : "pointer" }}
-            >
-              {cbtStep === steps.length - 1 ? "✓ 完了する" : "次へ →"}
-            </button>
-          </div>
+              </>
+            );
+          })()}
 
           {/* ヒント */}
           <div style={{ marginTop: 20 }}>

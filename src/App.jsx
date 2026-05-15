@@ -230,7 +230,7 @@ const EmotionInput = ({ value, onChange }) => {
                 style={{ flex: 1, background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 8, color: COLORS.text, fontSize: 14, padding: "10px 12px", outline: "none", fontFamily: "inherit" }}
               />
               <select value={f.intensity} onChange={(e) => handleFreeChange(idx, "intensity", parseInt(e.target.value))}
-                style={{ background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 8, color: COLORS.text, fontSize: 14, padding: "10px 8px", outline: "none", fontFamily: "inherit", width: 80 }}>
+                style={{ background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 8, color: COLORS.text, fontSize: 14, padding: "10px 6px", outline: "none", fontFamily: "inherit", width: 70, flexShrink: 0, boxSizing: "border-box" }}>
                 {INTENSITY_OPTIONS.map(v => <option key={v} value={v}>{v}%</option>)}
               </select>
               {freeInputs.length > 1 && (

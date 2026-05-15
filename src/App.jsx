@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { IconChartLine, IconPencil, IconListCheck, IconBrain, IconBulb, IconPlus, IconArrowLeft, IconPin, IconHome, IconShield, IconSettings, IconStar, IconNotes, IconMessage, IconStethoscope, IconLeaf } from "@tabler/icons-react";
+import { IconChartLine, IconPencil, IconListCheck, IconBrain, IconBulb, IconPlus, IconArrowLeft, IconPin, IconHome, IconShield, IconSettings, IconStar, IconNotes, IconMessage, IconStethoscope, IconLeaf, IconDeviceMobile, IconShare, IconCircleCheck, IconDotsVertical, IconDeviceDesktop } from "@tabler/icons-react";
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
@@ -674,34 +674,29 @@ const setOnboarded = () => {
 
 const ONBOARDING_SLIDES = [
   {
-    icon: "🌱",
-    title: "Strideへようこそ",
-    desc: "毎日の記録と振り返りで、ストレスを引きずらない習慣を作るアプリです。",
-    color: COLORS.accent,
+    Icon: IconLeaf,
+    title: "今日も、一歩ずつ。",
+    desc: "毎日の記録と振り返りで、自分のパターンが見えてくるアプリです。",
   },
   {
-    icon: "📊",
-    title: "毎日のチェックイン",
-    desc: "気分・体調・睡眠を毎日記録。グラフや週次レポートで自分のパターンを把握できます。",
-    color: COLORS.accent,
+    Icon: IconChartLine,
+    title: "自分の状態を知ろう",
+    desc: "気分・体調・睡眠を毎日チェックイン。ストレスや出来事も記録して、自分のパターンを把握しよう。",
   },
   {
-    icon: "🧠",
-    title: "ストレスに向き合う",
-    desc: "認知再構成・問題解決技法・コーピングから自分に合ったアプローチを選べます。",
-    color: "#818cf8",
+    Icon: IconBrain,
+    title: "ストレスに、対処する",
+    desc: "認知再構成・問題解決技法・コーピングで、ストレスと上手に向き合う方法を身につけよう。",
   },
   {
-    icon: "⭐",
-    title: "自分を知るツール",
-    desc: "できたことログ・マインドフルネス・クライシスプランで再発防止の基盤を作ります。",
-    color: "#e0a855",
+    Icon: IconStethoscope,
+    title: "支援者と、もっとうまく話せる",
+    desc: "伝えたいことを整理して、診察や面談をBridge Sessionでサポート。言いたいことを、ちゃんと伝えよう。",
   },
   {
-    icon: "📖",
+    Icon: IconNotes,
     title: "詳しくはガイドへ",
-    desc: "各機能の詳しい使い方はホームの「使い方ガイド」からいつでも確認できます。",
-    color: COLORS.accent,
+    desc: "各機能の使い方はホームの「使い方ガイド」からいつでも確認できます。",
   },
 ];
 
@@ -1181,7 +1176,7 @@ export default function App() {
       <div style={{ minHeight: "100vh", background: COLORS.bg, color: COLORS.text, fontFamily: "'Noto Sans JP', sans-serif", maxWidth: 480, margin: "0 auto", padding: "40px 20px", boxSizing: "border-box" }}>
         <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&display=swap" rel="stylesheet" />
         <div style={{ fontSize: 13, letterSpacing: 3, color: COLORS.accent, textTransform: "uppercase", fontWeight: 700, marginBottom: 24 }}>Stride</div>
-        <div style={{ fontSize: 48, marginBottom: 16, textAlign: "center" }}>📱</div>
+        <div style={{ marginBottom: 16, textAlign: "center" }}><IconDeviceMobile size={48} color={COLORS.accent} /></div>
         <div style={{ fontSize: 22, fontWeight: 700, color: COLORS.text, marginBottom: 12, textAlign: "center" }}>
           ホーム画面に追加して<br />使ってみよう！
         </div>
@@ -1194,13 +1189,13 @@ export default function App() {
             <>
               <div style={{ fontSize: 12, color: COLORS.accent, fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", marginBottom: 16 }}>iPhoneの場合</div>
               {[
-                { step: "1", icon: "⬆️", text: "Safari下部の「共有」ボタンをタップ" },
-                { step: "2", icon: "➕", text: "「ホーム画面に追加」を選択" },
-                { step: "3", icon: "✅", text: "「追加」をタップして完了" },
-              ].map(({ step, icon, text }) => (
+                { step: "1", Icon: IconShare, text: "Safari下部の「共有」ボタンをタップ" },
+                { step: "2", Icon: IconPlus, text: "「ホーム画面に追加」を選択" },
+                { step: "3", Icon: IconCircleCheck, text: "「追加」をタップして完了" },
+              ].map(({ step, Icon, text }) => (
                 <div key={step} style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 14 }}>
                   <div style={{ width: 28, height: 28, borderRadius: "50%", background: COLORS.accentSoft, border: `1px solid ${COLORS.accent}`, color: COLORS.accent, fontSize: 12, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{step}</div>
-                  <div style={{ fontSize: 22, flexShrink: 0 }}>{icon}</div>
+                  <div style={{ flexShrink: 0 }}><Icon size={22} color={COLORS.accent} /></div>
                   <div style={{ fontSize: 13, color: COLORS.text, lineHeight: 1.5 }}>{text}</div>
                 </div>
               ))}
@@ -1210,13 +1205,13 @@ export default function App() {
             <>
               <div style={{ fontSize: 12, color: COLORS.accent, fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", marginBottom: 16 }}>Androidの場合</div>
               {[
-                { step: "1", icon: "⋮", text: "ブラウザ右上のメニュー（⋮）をタップ" },
-                { step: "2", icon: "➕", text: "「ホーム画面に追加」を選択" },
-                { step: "3", icon: "✅", text: "「追加」をタップして完了" },
-              ].map(({ step, icon, text }) => (
+                { step: "1", Icon: IconDotsVertical, text: "ブラウザ右上のメニュー（⋮）をタップ" },
+                { step: "2", Icon: IconPlus, text: "「ホーム画面に追加」を選択" },
+                { step: "3", Icon: IconCircleCheck, text: "「追加」をタップして完了" },
+              ].map(({ step, Icon, text }) => (
                 <div key={step} style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 14 }}>
                   <div style={{ width: 28, height: 28, borderRadius: "50%", background: COLORS.accentSoft, border: `1px solid ${COLORS.accent}`, color: COLORS.accent, fontSize: 12, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{step}</div>
-                  <div style={{ fontSize: 22, flexShrink: 0 }}>{icon}</div>
+                  <div style={{ flexShrink: 0 }}><Icon size={22} color={COLORS.accent} /></div>
                   <div style={{ fontSize: 13, color: COLORS.text, lineHeight: 1.5 }}>{text}</div>
                 </div>
               ))}
@@ -1224,7 +1219,7 @@ export default function App() {
           )}
           {!isIos && !isAndroid && (
             <div style={{ textAlign: "center", padding: "8px 0" }}>
-              <div style={{ fontSize: 32, marginBottom: 12 }}>💻</div>
+              <div style={{ marginBottom: 12 }}><IconDeviceDesktop size={32} color={COLORS.accent} /></div>
               <div style={{ fontSize: 13, color: COLORS.textMuted, lineHeight: 1.8 }}>
                 スマートフォンのブラウザで開くと<br />ホーム画面に追加できます。
               </div>
@@ -1257,13 +1252,13 @@ export default function App() {
         {/* プログレスドット */}
         <div style={{ display: "flex", gap: 6, justifyContent: "center", paddingTop: 48, flexShrink: 0 }}>
           {ONBOARDING_SLIDES.map((_, i) => (
-            <div key={i} style={{ width: i === onboardSlide ? 20 : 6, height: 6, borderRadius: 3, background: i === onboardSlide ? slide.color : COLORS.border, transition: "all 0.3s" }} />
+            <div key={i} style={{ width: i === onboardSlide ? 20 : 6, height: 6, borderRadius: 3, background: i === onboardSlide ? COLORS.accent : COLORS.border, transition: "all 0.3s" }} />
           ))}
         </div>
 
         {/* スライドコンテンツ */}
         <div key={onboardSlide} className="slide" style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center", padding: "0 24px" }}>
-          <div style={{ fontSize: 52, marginBottom: 20 }}>{slide.icon}</div>
+          <div style={{ marginBottom: 20 }}><slide.Icon size={52} color={COLORS.accent} /></div>
           <div style={{ fontSize: 20, fontWeight: 700, color: COLORS.text, marginBottom: 12, lineHeight: 1.4 }}>{slide.title}</div>
           <div style={{ fontSize: 14, color: COLORS.textMuted, lineHeight: 1.8, maxWidth: 300 }}>{slide.desc}</div>
         </div>
@@ -1279,7 +1274,7 @@ export default function App() {
           <button onClick={() => {
             if (isLast) { setOnboarded(true); setOnboardedState(true); }
             else setOnboardSlide(onboardSlide + 1);
-          }} style={{ flex: 2, background: slide.color, border: "none", borderRadius: 12, color: "#0f1117", fontSize: 15, fontWeight: 700, padding: 14, cursor: "pointer" }}>
+          }} style={{ flex: 2, background: COLORS.accent, border: "none", borderRadius: 12, color: "#0f1117", fontSize: 15, fontWeight: 700, padding: 14, cursor: "pointer" }}>
             {isLast ? "はじめる 🎉" : "次へ →"}
           </button>
         </div>
@@ -2852,10 +2847,10 @@ export default function App() {
       {view === "guide" && (
         <div className="page" style={{ padding: "20px 16px" }}>
           {ONBOARDING_SLIDES.map((slide, i) => (
-            <div key={i} style={{ background: COLORS.surface, borderRadius: 14, padding: "16px 18px", marginBottom: 12, border: `1px solid ${slide.color}30` }}>
+            <div key={i} style={{ background: COLORS.surface, borderRadius: 14, padding: "16px 18px", marginBottom: 12, border: `1px solid ${COLORS.accent}30` }}>
               <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 8 }}>
-                <span style={{ fontSize: 24 }}>{slide.icon}</span>
-                <div style={{ fontSize: 14, fontWeight: 700, color: slide.color }}>{slide.title}</div>
+                <slide.Icon size={22} color={COLORS.accent} />
+                <div style={{ fontSize: 14, fontWeight: 700, color: COLORS.accent }}>{slide.title}</div>
               </div>
               <div style={{ fontSize: 13, color: COLORS.textMuted, lineHeight: 1.8 }}>{slide.desc}</div>
             </div>

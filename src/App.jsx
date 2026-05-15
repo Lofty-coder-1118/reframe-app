@@ -4526,6 +4526,11 @@ export default function App() {
                         const atIdx = steps.findIndex(s => s.id === "autoThought" || s.id === "autoThought3");
                         setCbtStep(atIdx >= 0 ? atIdx : cbtStep - 1);
                         setPendingThought(null);
+                      } else if ((sid === "evidence_for" || sid === "evidence_against") && autoThoughts.length > 1) {
+                        const efIdx = steps.findIndex(s => s.id === "evidence_for");
+                        setCbtStep(efIdx >= 0 ? efIdx : cbtStep - 1);
+                        setSelectedThought("");
+                        setPendingThought(null);
                       } else {
                         setCbtStep(cbtStep - 1);
                       }

@@ -227,7 +227,7 @@ const EmotionInput = ({ value, onChange }) => {
                 placeholder="例）不安"
                 value={f.name}
                 onChange={(e) => handleFreeChange(idx, "name", e.target.value)}
-                style={{ flex: 1, background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 8, color: COLORS.text, fontSize: 14, padding: "10px 12px", outline: "none", fontFamily: "inherit" }}
+                style={{ flex: 1, minWidth: 0, boxSizing: "border-box", background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 8, color: COLORS.text, fontSize: 14, padding: "10px 12px", outline: "none", fontFamily: "inherit" }}
               />
               <select value={f.intensity} onChange={(e) => handleFreeChange(idx, "intensity", parseInt(e.target.value))}
                 style={{ background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 8, color: COLORS.text, fontSize: 14, padding: "10px 6px", outline: "none", fontFamily: "inherit", width: 70, flexShrink: 0, boxSizing: "border-box" }}>

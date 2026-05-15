@@ -4947,7 +4947,7 @@ export default function App() {
                   style={{ background: "none", border: "none", color: COLORS.textMuted, cursor: "pointer", fontSize: 20, padding: 4, lineHeight: 1 }}>✕</button>
               </div>
               {/* コンテンツ */}
-              <div style={{ overflowY: "auto", padding: "0 20px 32px" }}>
+              <div style={{ overflowY: "auto", padding: "0 20px 32px", WebkitOverflowScrolling: "touch", scrollbarWidth: "none", msOverflowStyle: "none" }}>
                 <div style={{ fontSize: 13, color: COLORS.textMuted, lineHeight: 1.7, marginBottom: 16, paddingBottom: 16, borderBottom: `1px solid ${COLORS.border}` }}>
                   {h.purpose}
                 </div>

@@ -3012,13 +3012,6 @@ export default function App() {
                     <span style={{ color: COLORS.border }}> / 5</span>
                   </div>
                 </div>
-                {c.practices?.length > 0 && (
-                  <div style={{ marginTop: 8, display: "flex", flexWrap: "wrap", gap: 6 }}>
-                    {c.practices.slice(-3).map(p => (
-                      <span key={p.id} style={{ fontSize: 11, padding: "2px 8px", borderRadius: 8, background: COLORS.bg, border: `1px solid ${COLORS.border}`, color: COLORS.textMuted }}>{p.date} {p.result}</span>
-                    ))}
-                  </div>
-                )}
                 {c.pendingPractice && (
                   <button onClick={() => { setCopingPracticeId(c.id); setCopingPracticeResult(null); }}
                     style={{ marginTop: 10, width: "100%", background: "#e0a85510", border: `1px solid #e0a85540`, borderRadius: 8, color: "#e0a855", fontSize: 13, fontWeight: 700, padding: "10px", cursor: "pointer" }}>
@@ -4741,7 +4734,7 @@ export default function App() {
 
       {/* 削除確認ダイアログ */}
       {deleteTargetId && (
-        <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.4)", display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", display: "flex", alignItems: "center", justifyContent: "center", padding: 24, zIndex: 300 }}>
           <div style={{ background: COLORS.surface, borderRadius: 16, padding: 24, width: "100%", maxWidth: 320 }}>
             <div style={{ fontSize: 16, fontWeight: 700, color: COLORS.text, marginBottom: 8 }}>この記録を削除しますか？</div>
             <div style={{ fontSize: 13, color: COLORS.textMuted, lineHeight: 1.7, marginBottom: 24 }}>

@@ -929,8 +929,20 @@ export default function App() {
   const [guideOpenIndex, setGuideOpenIndex] = useState(null);
   const [helpModal, setHelpModal] = useState(null);
   useEffect(() => {
-    document.body.style.overflow = helpModal ? "hidden" : "";
-    return () => { document.body.style.overflow = ""; };
+    if (helpModal) {
+      const scrollY = window.scrollY;
+      document.body.style.overflow = "hidden";
+      document.body.style.position = "fixed";
+      document.body.style.top = `-${scrollY}px`;
+      document.body.style.width = "100%";
+      return () => {
+        document.body.style.overflow = "";
+        document.body.style.position = "";
+        document.body.style.top = "";
+        document.body.style.width = "";
+        window.scrollTo(0, scrollY);
+      };
+    }
   }, [helpModal]);
   const [copingSelectId, setCopingSelectId] = useState(null);
   const [copingConfirm, setCopingConfirm] = useState(null); // { type, editId, text, text2 }

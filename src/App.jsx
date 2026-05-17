@@ -966,12 +966,54 @@ export default function App() {
   useEffect(() => { saveBridgeMemos(bridgeMemos); }, [bridgeMemos]);
 
   const printHtml = (html) => {
-    const w = window.open('', '_blank');
-    if (!w) return;
-    w.document.write(html);
-    w.document.close();
-    w.focus();
-    setTimeout(() => { w.print(); }, 400);
+    const isPWA = window.matchMedia('(display-mode: standalone)').matches
+      || window.navigator.standalone === true;
+
+    if (!isPWA) {
+      const w = window.open('', '_blank');
+      if (!w) return;
+      w.document.write(html);
+      w.document.close();
+      w.focus();
+      setTimeout(() => { w.print(); }, 400);
+      return;
+    }
+
+    // PWA: overlay + iframe でアプリ画面を保持したまま印刷プレビューを表示
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:99999;background:#fff;display:flex;flex-direction:column;';
+
+    const bar = document.createElement('div');
+    bar.style.cssText = 'display:flex;align-items:center;justify-content:flex-end;gap:8px;padding:10px 14px;border-bottom:1px solid #e5e7eb;flex-shrink:0;background:#fff;';
+
+    const printBtn = document.createElement('button');
+    printBtn.textContent = '🖨️ 印刷・PDF保存';
+    printBtn.style.cssText = 'background:#111;color:#fff;border:none;padding:8px 16px;border-radius:20px;font-size:13px;cursor:pointer;font-family:sans-serif;';
+
+    const closeBtn = document.createElement('button');
+    closeBtn.textContent = '← 戻る';
+    closeBtn.style.cssText = 'background:none;border:1px solid #d1d5db;color:#374151;padding:8px 16px;border-radius:20px;font-size:13px;cursor:pointer;font-family:sans-serif;';
+
+    const iframe = document.createElement('iframe');
+    iframe.style.cssText = 'flex:1;border:none;width:100%;';
+
+    const remove = () => { if (overlay.parentNode) overlay.parentNode.removeChild(overlay); };
+    closeBtn.onclick = remove;
+    printBtn.onclick = () => { try { iframe.contentWindow.print(); } catch (e) {} };
+
+    bar.appendChild(printBtn);
+    bar.appendChild(closeBtn);
+    overlay.appendChild(bar);
+    overlay.appendChild(iframe);
+    document.body.appendChild(overlay);
+
+    iframe.contentDocument.open();
+    iframe.contentDocument.write(html);
+    iframe.contentDocument.close();
+
+    if (iframe.contentWindow) iframe.contentWindow.onafterprint = remove;
+
+    setTimeout(() => { try { iframe.contentWindow.print(); } catch (e) {} }, 400);
   };
 
   const handleCrisisPrint = () => {

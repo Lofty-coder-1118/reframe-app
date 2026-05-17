@@ -965,6 +965,41 @@ export default function App() {
   useEffect(() => { saveBridgeSettings(bridgeSettings); }, [bridgeSettings]);
   useEffect(() => { saveBridgeMemos(bridgeMemos); }, [bridgeMemos]);
 
+  const printHtml = (html) => {
+    const w = window.open('', '_blank');
+    if (!w) return;
+    w.document.write(html);
+    w.document.close();
+    w.focus();
+    setTimeout(() => { w.print(); }, 400);
+  };
+
+  const handleCrisisPrint = () => {
+    const today = `${t.year}年${parseInt(t.month)}月${parseInt(t.day)}日`;
+    const li = (items) => items.length > 0
+      ? items.map(item => '<li>' + item.text + (item.text2 ? '　→ ' + item.text2 : '') + '</li>').join('')
+      : '<li class="empty">未記入</li>';
+    const html = '<!DOCTYPE html><html lang="ja"><head><meta charset="UTF-8"><title>クライシスプラン</title><style>'
+      + 'body{font-family:\'Hiragino Kaku Gothic ProN\',\'Noto Sans JP\',sans-serif;background:#fff;color:#111;padding:32px;max-width:600px;margin:0 auto;}'
+      + 'h1{font-size:22px;font-weight:700;margin:0 0 4px;}'
+      + '.meta{font-size:12px;color:#888;margin-bottom:28px;}'
+      + 'h2{font-size:14px;font-weight:700;margin:20px 0 8px;padding-bottom:4px;border-bottom:1px solid #ddd;}'
+      + 'ul{list-style:none;padding:0;margin:0;}'
+      + 'li{font-size:13px;line-height:1.9;}'
+      + 'li::before{content:"・";}'
+      + '.empty{color:#999;}.safe{color:#0ea5e9;}.caution{color:#d97706;}.crisis{color:#ef4444;}'
+      + '</style></head><body>'
+      + '<h1>クライシスプラン</h1>'
+      + '<div class="meta">出力日：' + today + '</div>'
+      + '<h2 class="safe">Safe — 安定しているときの状態</h2><ul>' + li(crisisPlan.safe) + '</ul>'
+      + '<h2 class="caution">Caution — トリガー</h2><ul>' + li(crisisPlan.caution_triggers) + '</ul>'
+      + '<h2 class="caution">Caution — 注意サイン</h2><ul>' + li(crisisPlan.caution_signs) + '</ul>'
+      + '<h2 class="crisis">Crisis — 危機のサイン</h2><ul>' + li(crisisPlan.crisis_signs) + '</ul>'
+      + '<h2 class="crisis">Crisis — 対処法・連絡先</h2><ul>' + li(crisisPlan.crisis_contacts) + '</ul>'
+      + '</body></html>';
+    printHtml(html);
+  };
+
   const sortedCopings = [...copings].sort((a, b) => {
     const valA = copingSort === "difficulty" ? a.difficulty : a.effect;
     const valB = copingSort === "difficulty" ? b.difficulty : b.effect;
@@ -1453,17 +1488,8 @@ export default function App() {
         body { padding-bottom: env(safe-area-inset-bottom); }
 
         @media print {
-          body { background: white !important; color: black !important; font-family: 'Noto Sans JP', sans-serif; }
           .no-print { display: none !important; }
-          .print-only { display: block !important; }
-          .print-container { padding: 20px; max-width: 100%; }
-          .print-section { margin-bottom: 20px; border: 1px solid #ccc; border-radius: 8px; padding: 14px; page-break-inside: avoid; }
-          .print-label { font-size: 10px; font-weight: 700; color: #666; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 4px; }
-          .print-value { font-size: 13px; color: #111; line-height: 1.7; }
-          .print-title { font-size: 18px; font-weight: 700; margin-bottom: 4px; color: #111; }
-          .print-meta { font-size: 11px; color: #888; margin-bottom: 16px; }
         }
-        .print-only { display: none; }
       `}</style>
 
       {/* Header */}
@@ -3640,38 +3666,12 @@ export default function App() {
             </div>
           )}
 
-          <button className="no-print" onClick={() => window.print()}
+          <button className="no-print" onClick={handleCrisisPrint}
             style={{ width: "100%", background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 12, color: COLORS.textMuted, fontSize: 14, fontWeight: 700, padding: 14, cursor: "pointer", marginBottom: 8, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
             📄 PDFとして保存する
           </button>
 
           <BottomNav onBack={() => { setView("tools"); setActiveTab("tools"); }} onHome={() => { setView("home"); setActiveTab("home"); }} />
-
-          {/* クライシスプラン印刷用コンテンツ */}
-          <div className="print-only print-container">
-            <div className="print-title">Stride クライシスプラン</div>
-            <div className="print-meta">出力日：{`${t.year}年${parseInt(t.month)}月${parseInt(t.day)}日`}</div>
-            <div className="print-section">
-              <div className="print-label" style={{ color: "#0ea5e9" }}>🟢 Safe — 安定しているときの状態</div>
-              {crisisPlan.safe.length > 0 ? crisisPlan.safe.map((item, i) => <div key={i} className="print-value">・{item.text}</div>) : <div className="print-value" style={{ color: "#999" }}>未記入</div>}
-            </div>
-            <div className="print-section">
-              <div className="print-label" style={{ color: "#e0a855" }}>🟡 Caution — トリガー</div>
-              {crisisPlan.caution_triggers.length > 0 ? crisisPlan.caution_triggers.map((item, i) => <div key={i} className="print-value" style={{ marginBottom: 4 }}>・{item.text}{item.text2 && <span style={{ color: "#666" }}>　→ {item.text2}</span>}</div>) : <div className="print-value" style={{ color: "#999" }}>未記入</div>}
-            </div>
-            <div className="print-section">
-              <div className="print-label" style={{ color: "#e0a855" }}>🟡 Caution — 注意サイン</div>
-              {crisisPlan.caution_signs.length > 0 ? crisisPlan.caution_signs.map((item, i) => <div key={i} className="print-value" style={{ marginBottom: 4 }}>・{item.text}{item.text2 && <span style={{ color: "#666" }}>　→ {item.text2}</span>}</div>) : <div className="print-value" style={{ color: "#999" }}>未記入</div>}
-            </div>
-            <div className="print-section">
-              <div className="print-label" style={{ color: "#f87171" }}>🔴 Crisis — 危機のサイン</div>
-              {crisisPlan.crisis_signs.length > 0 ? crisisPlan.crisis_signs.map((item, i) => <div key={i} className="print-value">・{item.text}</div>) : <div className="print-value" style={{ color: "#999" }}>未記入</div>}
-            </div>
-            <div className="print-section">
-              <div className="print-label" style={{ color: "#f87171" }}>🔴 Crisis — 対処法・連絡先</div>
-              {crisisPlan.crisis_contacts.length > 0 ? crisisPlan.crisis_contacts.map((item, i) => <div key={i} className="print-value">・{item.text}</div>) : <div className="print-value" style={{ color: "#999" }}>未記入</div>}
-            </div>
-          </div>
 
           {/* 入力モーダル */}
           {crisisModal && (
@@ -3906,6 +3906,42 @@ export default function App() {
               });
               const rTopEmotions = Object.entries(rEmotionMap).sort((a, b) => b[1] - a[1]).slice(0, 3);
               const hasAnyData = rCheckins.length > 0 || rStressCount > 0;
+              const handleWeeklyPrint = () => {
+                const today = `${t.year}年${parseInt(t.month)}月${parseInt(t.day)}日`;
+                const recHtml = rRecords.map(r => {
+                  const dets = [
+                    r.cbt?.emotion ? '感情：' + r.cbt.emotion : '',
+                    r.cbt?.autoThought ? '自動思考：' + r.cbt.autoThought.replace(/\n/g, ' / ') : '',
+                    r.cbt?.balanced ? 'バランス思考：' + r.cbt.balanced : '',
+                    r.ps?.target ? '取り組んだ問題：' + r.ps.target : '',
+                    r.coping ? 'コーピング：' + r.coping : '',
+                  ].filter(Boolean).join('<br>');
+                  return '<li style="margin-bottom:10px;"><span style="font-size:11px;color:#888;">' + formatDate(r.date) + '</span><br><strong>' + r.situation + '</strong>' + (dets ? '<br>' + dets : '') + '</li>';
+                }).join('');
+                const html = '<!DOCTYPE html><html lang="ja"><head><meta charset="UTF-8"><title>週次レポート</title><style>'
+                  + 'body{font-family:\'Hiragino Kaku Gothic ProN\',\'Noto Sans JP\',sans-serif;background:#fff;color:#111;padding:32px;max-width:600px;margin:0 auto;}'
+                  + 'h1{font-size:22px;font-weight:700;margin:0 0 4px;}'
+                  + '.meta{font-size:12px;color:#888;margin-bottom:28px;}'
+                  + 'h2{font-size:14px;font-weight:700;margin:20px 0 8px;padding-bottom:4px;border-bottom:1px solid #ddd;}'
+                  + 'ul{list-style:none;padding:0;margin:0;}'
+                  + 'li{font-size:13px;line-height:1.9;}'
+                  + 'li::before{content:"・";}'
+                  + '.muted{color:#999;}'
+                  + '</style></head><body>'
+                  + '<h1>週次レポート</h1>'
+                  + '<div class="meta">' + weekLabel + '　出力日：' + today + '</div>'
+                  + '<h2>気分スコア</h2><ul><li>' + (rAvgMood ? rAvgMood + ' / 10（チェックイン ' + rCheckins.length + '回 / 7日）' : '<span class="muted">記録なし</span>') + '</li></ul>'
+                  + '<h2>取り組み</h2><ul>'
+                  + '<li>ストレス記録：' + rStressCount + '回</li>'
+                  + '<li>認知再構成：' + rCbtCount + '回</li>'
+                  + '<li>問題解決技法：' + rPsCount + '回</li>'
+                  + '<li>コーピング：' + rCopingCount + '回</li>'
+                  + '</ul>'
+                  + (rTopEmotions.length > 0 ? '<h2>よく出た感情</h2><ul>' + rTopEmotions.map(([n, c]) => '<li>' + n + '（' + c + '回）</li>').join('') + '</ul>' : '')
+                  + (rRecords.length > 0 ? '<h2>ストレス記録</h2><ul>' + recHtml + '</ul>' : '')
+                  + '</body></html>';
+                printHtml(html);
+              };
               return (
                 <div key="report" className="page">
                   {/* 週ナビゲーション */}
@@ -3978,52 +4014,10 @@ export default function App() {
                   )}
 
                   {/* エクスポートボタン */}
-                  <button className="no-print" onClick={() => window.print()}
+                  <button className="no-print" onClick={handleWeeklyPrint}
                     style={{ width: "100%", background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 12, color: COLORS.textMuted, fontSize: 14, fontWeight: 700, padding: 14, cursor: "pointer", marginTop: 8, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
                     📄 PDFとして保存する
                   </button>
-
-                  {/* 印刷用コンテンツ */}
-                  <div className="print-only print-container">
-                    <div className="print-title">Stride 週次レポート</div>
-                    <div className="print-meta">{weekLabel}　出力日：{`${t.year}年${parseInt(t.month)}月${parseInt(t.day)}日`}</div>
-
-                    <div className="print-section">
-                      <div className="print-label">平均気分スコア</div>
-                      <div className="print-value">{rAvgMood ? `${rAvgMood} / 10（チェックイン ${rCheckins.length}回）` : "記録なし"}</div>
-                    </div>
-
-                    <div className="print-section">
-                      <div className="print-label">取り組み</div>
-                      <div className="print-value">
-                        ストレス記録：{rStressCount}回　認知再構成：{rCbtCount}回　問題解決技法：{rPsCount}回　コーピング：{rCopingCount}回
-                      </div>
-                    </div>
-
-                    {rTopEmotions.length > 0 && (
-                      <div className="print-section">
-                        <div className="print-label">よく出た感情</div>
-                        <div className="print-value">{rTopEmotions.map(([n, c]) => `${n}（${c}回）`).join("　")}</div>
-                      </div>
-                    )}
-
-                    {rRecords.length > 0 && (
-                      <div className="print-section">
-                        <div className="print-label">ストレス記録</div>
-                        {rRecords.map((r, i) => (
-                          <div key={i} style={{ marginBottom: 12, paddingBottom: 12, borderBottom: i < rRecords.length - 1 ? "1px solid #eee" : "none" }}>
-                            <div style={{ fontSize: 12, color: "#888", marginBottom: 2 }}>{formatDate(r.date)}</div>
-                            <div className="print-value" style={{ fontWeight: 700 }}>{r.situation}</div>
-                            {r.cbt?.emotion && <div className="print-value">感情：{r.cbt.emotion}</div>}
-                            {r.cbt?.autoThought && <div className="print-value">自動思考：{r.cbt.autoThought.replace(/\n/g, " / ")}</div>}
-                            {r.cbt?.balanced && <div className="print-value">バランス思考：{r.cbt.balanced}</div>}
-                            {r.ps?.target && <div className="print-value">取り組んだ問題：{r.ps.target}</div>}
-                            {r.coping && <div className="print-value">コーピング：{r.coping}</div>}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
                 </div>
               );
             })()}

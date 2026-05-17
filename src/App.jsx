@@ -1487,9 +1487,6 @@ export default function App() {
         .page { animation: fadeIn 0.18s ease-out; }
         body { padding-bottom: env(safe-area-inset-bottom); }
 
-        @media print {
-          .no-print { display: none !important; }
-        }
       `}</style>
 
       {/* Header */}
